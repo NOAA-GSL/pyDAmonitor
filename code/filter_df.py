@@ -48,12 +48,12 @@ def filter_df(
     if not in_place:
         df = df.copy()
 
-    use_flag = df['Analysis_Use_Flag']
-    obs_type = df['Observation_Type']
+    use_flag = df['analysis_use_flag']
+    obs_type = df['observation_type']
     errorinv = df['errinv_final']
     lat =  df['latitude']
     lon = df['longitude']
-    pressure = df['Pressure']
+    pressure = df['pressure']
     elevation = df['station_elevation']
 
     # if hem is provided, override the lat/lon min/maxes

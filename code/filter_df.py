@@ -4,7 +4,7 @@ import numpy as np
 
 def filter_df(
     df,
-    obs_types,
+    obs_types=None,
     use=None,
     hem=None,
     p_range = None,
@@ -23,16 +23,18 @@ def filter_df(
                     being that indices are reset and use flag is 0 for not assimilated not -1
 
     Values needed from df:
-        obs_type     : (array int) bufr ob obs_types from netCDF file <Observation_Type>
+        use_flag : (array int) 1 f assimilated, 0 if not from netCDF file
+        obs_type : (array int) bufr ob obs_types from netCDF file <Observation_Type>
         errorinv : (array float) from netCDF file <Errinv_Final>
         lat      : (array float) from netCDF file <Latitude>
         lon      : (array float) from netCDF file <Longitude>
         pressure : (array float) from netCDF file <Pressure>
+        elevation: (array float) from netCDF file
 
      Args:
         obs_types    : (array int) bufr ob obs_types to filter by, see link 
                    https://emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_2.htm
-        use      : (int)   use flag for observation 1=assimilated
+        use      : (int)   use flag for observation 1=assimilated, 0=not
         p_range  : (float tuple) (min, max) pressure (mb) for including observation in df
         elv_range: (float tuple) (min, max) height (m) for including observation in df
         lat_range: (float tuple) (min, max) latitude (deg N) for including observation in df
@@ -88,10 +90,13 @@ def filter_df(
             msg = 'hemispheres must be: GLOBAL, NH, TR, SH, CONUS, or None'
             raise ValueError(msg)
 
+    # Initialize mask
+    mask = [True] * len(obs_type)
+    
     #filter for the desired obs types
-    mask = obs_type == obs_types[0]  # initialize mask
-    for cd in obs_types:
-        mask = np.logical_or(mask, obs_type == cd)  # loop over all obs_types provided
+    if obs_types is not None:
+        for t in obs_types:
+            mask = np.logical_or(mask, obs_type == t)  # loop over all obs_types provided
 
     # filter for desired use flag if provided
     if use is not None:

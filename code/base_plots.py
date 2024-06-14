@@ -41,7 +41,7 @@ def base_plots(df_anl, df_ges):
     for i, bar in enumerate(bars):
         height = bar.get_height()
         total_count = total_assim_by_obs_type_anl['analysis_use_flag'].iloc[i].astype(int)
-        plt.text(bar.get_x() + bar.get_width() / 2, height - 0.01, f'{'Total: ' + str(total_count)}', 
+        plt.text(bar.get_x() + bar.get_width() / 2, height - 0.01, 'Total: ' + str(total_count), 
                 ha='center', va='top', rotation=90)
         
     plt.show()
@@ -49,67 +49,78 @@ def base_plots(df_anl, df_ges):
     
     #*Plot histograms of obs, omf, and omb
     
-    obs = df_anl['observation']
+    obs = df_ges['observation']
     omf_ges = df_ges['omf_adjusted']
     omf_anl = df_anl['omf_adjusted']
-   
-    fig, axes = plt.subplots(1, 3, figsize = (16,5))
     
-    #Plot Observations
-    
-    # Get basic statistics
-    n, mean, std, mx, mn = len(obs), np.mean(obs), np.std(obs), np.max(obs), np.min(obs)
-    print(f'Observation Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
+    # Create subplots
+    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
-    # Make proper bin sizes using the equation max-min/sqrt(n). Then
-    # extend the bin range to 4x the standard deviation
-    binsize = (mx-mn)/np.sqrt(n)
-    bins = np.arange(mean-(4*std),mean+(4*std),binsize)
-    
-    axes[0].hist(obs, bins=bins)
+    #TODO Add customized labels based on variable type
+    data_list = [(obs, 'Observation', 'Observation Histogram'),
+                (omf_ges, 'Observation - Forecast Guess', 'OMF Guess Histogram'),
+                (omf_anl, 'Observation - Forecast Analysis', 'OMF Analysis Histogram')]
 
-    # Add labels
-    axes[0].set_xlabel('Observation')
-    axes[0].set_ylabel('Count')
-    axes[0].set_title('Observation Histogram', fontsize=14) #TODO Add customized labels based on the data file
-    
-    #Plot omf_anl
-    
-    # Get basic statistics
-    n, mean, std, mx, mn = len(omf_ges), np.mean(omf_ges), np.std(omf_ges), np.max(omf_ges), np.min(omf_ges)
-    print(f'OMF Analysis Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
+    for ax, (data, xlabel, title) in zip(axes, data_list):
+        # Get basic statistics
+        n, mean, std, mx, mn = len(data), np.mean(data), np.std(data), np.max(data), np.min(data)
+        print(f'{title} Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
 
-    # Make proper bin sizes using the equation max-min/sqrt(n). Then
-    # extend the bin range to 4x the standard deviation
-    binsize = (mx-mn)/np.sqrt(n)
-    bins = np.arange(mean-(4*std),mean+(4*std),binsize)
+        # Make proper bin sizes using the equation max-min/sqrt(n). Then
+        # extend the bin range to 4x the standard deviation
+        binsize = (mx - mn) / np.sqrt(n)
+        bins = np.arange(mean - (4 * std), mean + (4 * std), binsize)
+        
+        # Plot histogram
+        ax.hist(data, bins=bins)
+        
+        # Add labels
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel('Count')
+        ax.set_title(title, fontsize=14)
 
-    axes[1].hist(omf_ges, bins=bins)
-
-    # Add labels
-    axes[1].set_xlabel('Observation - Forecast Guess')
-    axes[1].set_ylabel('Count')
-    axes[1].set_title('OMF Guess Histogram', fontsize=14)
-    
-    #Plot omf_ges
-    
-    # Get basic statistics
-    n, mean, std, mx, mn = len(omf_anl), np.mean(omf_anl), np.std(omf_anl), np.max(omf_anl), np.min(omf_anl)
-    print(f'OMF Analysis Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
-
-    # Make proper bin sizes using the equation max-min/sqrt(n). Then
-    # extend the bin range to 4x the standard deviation
-    binsize = (mx-mn)/np.sqrt(n)
-    bins = np.arange(mean-(4*std),mean+(4*std),binsize)
-
-    axes[2].hist(omf_anl, bins=bins)
-
-    # Add labels
-    axes[2].set_xlabel('Observation - Forecast Analysis')
-    axes[2].set_ylabel('Count')
-    axes[2].set_title('OMF Analysis Histogram', fontsize=14)
-    
-    #add some more space between subplots
+    # Add some more space between subplots
     plt.subplots_adjust(wspace=0.3)
 
     plt.show()
+
+    
+    #* Create spatial plots of obs, omf_ges, and omf_anl
+    
+    #get lats and lons
+    latlons_ges = (df_ges['latitude'], df_ges['longitude'])
+    latlons_anl = (df_anl['latitude'], df_anl['longitude'])
+    ''' 
+    #! we have to do this^ because for some reason there are unexpected
+    #! differences in the _anl and _ges file so we can get slightly 
+    #! numbers of obs when filtering
+    '''
+    
+    # Create subplots
+    fig, axes = plt.subplots(3, 1, figsize=(15,20), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=0)})
+    
+    data_list = [(obs, 'Observation', 'Observations Map', 'Reds', latlons_ges),
+                (omf_ges, 'OmF Guess', 'OMF Guess Map', 'PRGn', latlons_ges),
+                (omf_anl, 'OmF Analysis', 'OMF Analysis Map', 'PRGn', latlons_anl)]
+
+    for ax, (data, label, title, color, coords) in zip(axes, data_list):
+        ax.add_feature(cfeature.COASTLINE)
+        ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='black')
+        ax.add_feature(cfeature.STATES, edgecolor='black')
+        # ax.set_extent([-180, 180, -90, 90])
+        
+        # Plot the scatter data with smaller and more transparent points
+        cs = ax.scatter(coords[1], coords[0], c=data, s=20, cmap=color, alpha=0.7, transform=ccrs.PlateCarree())
+        
+        # Add a colorbar
+        cb = plt.colorbar(cs, ax=ax, shrink=0.5, pad=.04, extend='both')
+        cb.set_label(label)
+        
+        # Set title
+        ax.set_title(title, fontsize=14)
+        
+    plt.tight_layout()
+        
+    plt.show()
+    
+    

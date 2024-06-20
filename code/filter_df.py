@@ -36,6 +36,7 @@ def filter_df(
                    https://emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_2.htm
         use      : (int)   use flag for observation 1=assimilated, 0=not
         p_range  : (float tuple) (min, max) pressure (mb) for including observation in df
+        hem      : (string) predetermined geographic extent (GLOBAL, NH, TR, SH, CONUS)
         elv_range: (float tuple) (min, max) height (m) for including observation in df
         lat_range: (float tuple) (min, max) latitude (deg N) for including observation in df
         lon_range: (float tuple) (min, max) latitude (deg E) for including observation in df
@@ -62,30 +63,20 @@ def filter_df(
     if hem is not None:
 
         if (hem == "GLOBAL"):
-            lat_max = 90.0
-            lat_min = -90.0
-            lon_max = 360.0
-            lon_min = 0.0
+            lat_range = (-90.0, 90.0)
+            lon_range = (0.0, 360.0)
         elif (hem == "NH"):
-            lat_max = -30.0
-            lat_min = -90.0
-            lon_max = 360.0
-            lon_min = 0.0
+            lat_range = (-90.0, -30.0)
+            lon_range = (0.0, 360.0)
         elif (hem == "TR"):
-            lat_max = 30.0
-            lat_min = -30.0
-            lon_max = 360.0
-            lon_min = 0.0
+            lat_range = (-30.0, 30.0)
+            lon_range = (0.0, 360.0)
         elif (hem == "SH"):
-            lat_max = 90.0
-            lat_min = 30.0
-            lon_max = 360.0
-            lon_min = 0.0
+            lat_range = (-90.0, 90.0)
+            lon_range = (0.0, 360.0)
         elif (hem == "CONUS"):
-            lat_max = 50.0
-            lat_min = 27.0
-            lon_max = 295.0
-            lon_min = 235.0
+            lat_range = (25.0, 50.0) #! changed from 27 to 25
+            lon_range = (235.0, 295.0)
         else:
             msg = 'hemispheres must be: GLOBAL, NH, TR, SH, CONUS, or None'
             raise ValueError(msg)
@@ -96,7 +87,7 @@ def filter_df(
     #filter for the desired obs types
     if obs_types is not None:
         for t in obs_types:
-            mask = np.logical_or(mask, obs_type == t)  # loop over all obs_types provided
+            mask = np.logical_and(mask, obs_type == t)  # loop over all obs_types provided
 
     # filter for desired use flag if provided
     if use is not None:
@@ -124,6 +115,10 @@ def filter_df(
         error_max_inv = 1.0 / err_range[1]
         mask = np.logical_and(mask, np.logical_and(errorinv <= error_min_inv, errorinv >= error_max_inv))
 
+    if(all(mask)):
+        print("No obs removed from filtering")
+        return df
+    
     #filter dataframe, keeping only desired obs
     df.drop(df[~mask].index, inplace = True)
 

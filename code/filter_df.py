@@ -109,11 +109,15 @@ def filter_df(
     if lon_range is not None:
         mask = np.logical_and(mask, np.logical_and(lon >= lon_range[0], lon <= lon_range[1]))
 
-    #set error mins and maxs and filter for desired error values if provided
+    #set error mins and maxs, invert them, and filter for desired error values if provided
     if err_range is not None:
-        error_min_inv = 1.0 / err_range[0]
-        error_max_inv = 1.0 / err_range[1]
-        mask = np.logical_and(mask, np.logical_and(errorinv <= error_min_inv, errorinv >= error_max_inv))
+        error_min_inv = err_range[0]
+        if(err_range[0]!=0):
+            error_min_inv = 1.0 / err_range[0]
+        error_max_inv = err_range[1]
+        if(err_range[1]!=0):
+            error_max_inv = 1.0 / err_range[1]
+        mask = np.logical_and(mask, np.logical_and(errorinv >= error_min_inv, errorinv <= error_max_inv))
 
     if(all(mask)):
         print("No obs removed from filtering")

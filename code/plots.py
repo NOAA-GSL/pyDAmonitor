@@ -35,7 +35,12 @@ def base_plots(df_anl, df_ges, metadata, **args):
         df_ges['omf_adjusted'] = 1.8 * df_ges['omf_adjusted']
         
     #* Create the bar plot by obs type showing proportional assimilated and total assimilated
-    assimilated_by_obs_plots(df_anl)
+    if(len(df_anl['observation_type'].unique()) > 1):
+        assimilated_by_obs_plots(df_anl)
+    else:
+        prop_assimilated = df_anl['analysis_use_flag'].mean()
+        ob_type = df_anl['observation_type'].iloc[0]
+        print(f'Observation Type: {ob_type}\n\nProportion Assimilated: {prop_assimilated}\n')
     
     #*Plot histograms of obs, omf, and omb
     obs = df_ges['observation']
@@ -83,7 +88,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
         #create small scale spatial plots 
         
         #create obs spatial plot
-        fig, ax = plt.subplots(1, 1, figsize=(8,10), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
+        fig, ax = plt.subplots(1, 1, figsize=(15,20), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         ax.add_feature(cfeature.COASTLINE)
         ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='black')
@@ -104,7 +109,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
         plt.show()
         
         #create spatial plot with omf and oma
-        fig, ax = plt.subplots(1, 1, figsize=(8,10), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
+        fig, ax = plt.subplots(1, 1, figsize=(15,20), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         ax.add_feature(cfeature.COASTLINE)
         ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='black')
@@ -114,13 +119,13 @@ def base_plots(df_anl, df_ges, metadata, **args):
         norm = mcolors.TwoSlopeNorm(vmin = 0 - np.std(omf), vcenter=0, vmax = 0 + np.std(omf))
         # # Plot the omf/oma data with two circle of different sizes (Option 1)
         cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=50, cmap='PRGn', transform=ccrs.PlateCarree(),
-                         edgecolors='black', linewidths=0.2, label='omf', norm=norm)
+                         edgecolors='black', linewidths=0.2, label='OmF', norm=norm)
         
         cs2 = ax.scatter(latlons_anl[1], latlons_anl[0], c=oma, s=10, cmap='PRGn', transform=ccrs.PlateCarree(),
-                         edgecolors='black', linewidths=0.2, label='oma', norm=norm)
+                         edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
         # Plot the omf/oma data with two sqaures next to each other (Option 2)
         # lat_range = latlons_ges[0].max() - latlons_ges[0].min()
-        # offset_ratio = 80
+        # offset_ratio = 145
         # offset = lat_range / offset_ratio
         # cs1 = ax.scatter(latlons_ges[1], latlons_ges[0]+offset, c=omf, s=30, cmap='PRGn', marker='s', 
         #                  edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(), label='omf', norm=norm)
@@ -133,7 +138,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
         # Add a colorbar adn legend
         cb = plt.colorbar(cs2, ax=ax, shrink=0.3, pad=.04, extend='both')
         cb.set_label('OmF and OmA')
-        ax.legend()
+        ax.legend(loc='upper right', fontsize='medium', framealpha=0.9)
         # Set title
         ax.set_title('OmF and OmA Comparison', fontsize=14)
         plt.tight_layout()
@@ -192,7 +197,12 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
     v_oma = df_anl['u_omf_adjusted']
     
     #* Create the bar plot by obs type showing proportional assimilated and total assimilated
-    assimilated_by_obs_plots(df_anl)
+    if(len(df_anl['observation_type'].unique()) > 1):
+        assimilated_by_obs_plots(df_anl)
+    else:
+        prop_assimilated = df_anl['analysis_use_flag'].mean()
+        ob_type = df_anl['observation_type'].iloc[0]
+        print(f'Observation Type: {ob_type}\n\nProportion Assimilated: {prop_assimilated}\n')
     
     #*Plot histograms of obs, omf, and omb
     
@@ -238,9 +248,9 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
     area_size = (latlons_ges[0].max() - latlons_ges[0].min()) * (latlons_ges[1].max() - latlons_ges[1].min())
     
     # Create the plot of observations
-    plt.figure(figsize=(15, 12))
+    plt.figure(figsize=(15, 20))
     
-    ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=0))
+    ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=260))
     ax.add_feature(cfeature.COASTLINE)
     ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='black')
     ax.add_feature(cfeature.STATES, edgecolor='black')
@@ -249,9 +259,9 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
     mag = np.sqrt( (u_obs**2) + (v_obs**2) )
     u_norm = u_obs / mag
     v_norm = v_obs / mag
-    cs = plt.quiver(latlons_ges[1], latlons_ges[0], u_norm, v_norm, mag, scale=50, cmap='plasma', transform=ccrs.PlateCarree())
+    cs = plt.quiver(latlons_ges[1], latlons_ges[0], u_norm, v_norm, mag, scale=60, cmap='plasma', transform=ccrs.PlateCarree())
     # Add a colorbar
-    cb = plt.colorbar(cs, shrink=0.5, pad=.04, extend='both')
+    cb = plt.colorbar(cs, shrink=0.3, pad=.04, extend='both')
     cb.set_label('Wind Speed')
     # Add gridlines for latitude and longitude
     gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
@@ -269,12 +279,14 @@ def assimilated_by_obs_plots(df_anl):
     prop_assim_by_obs_type_anl = pd.DataFrame(df_anl.groupby('observation_type')['analysis_use_flag'].mean())
     total_assim_by_obs_type_anl = pd.DataFrame(df_anl.groupby('observation_type')['analysis_use_flag'].sum())
     
-    fig, axes = plt.subplots(1, 2, figsize = (12, 6))
+    fig, axes = plt.subplots(1, 2, figsize = (18, 6))
     
     #create bars for prop
     axes[0].bar(range(len(prop_assim_by_obs_type_anl['analysis_use_flag'])),
                 prop_assim_by_obs_type_anl['analysis_use_flag'],
                 tick_label=prop_assim_by_obs_type_anl.index)
+    # Rotate tick labels
+    axes[0].tick_params(axis='x', rotation=90)
     # Add labels and title as necessary
     axes[0].set_xlabel('Obs Type')
     axes[0].set_ylabel('Prop. Assimilated')
@@ -283,6 +295,8 @@ def assimilated_by_obs_plots(df_anl):
     axes[1].bar(range(len(total_assim_by_obs_type_anl['analysis_use_flag'])),
                 total_assim_by_obs_type_anl['analysis_use_flag'],
                 tick_label=prop_assim_by_obs_type_anl.index)
+    # Rotate tick labels
+    axes[1].tick_params(axis='x', rotation=90)
     # Add labels and title as necessary
     axes[1].set_xlabel('Obs Type')
     axes[1].set_ylabel('Total Assimilated')

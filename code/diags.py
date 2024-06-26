@@ -10,11 +10,14 @@ Altercations make for PyGSI:
 
 
 import os
+import io
+import sys
 import pandas as pd
 import numpy as np
 from netCDF4 import Dataset
 from datetime import datetime
 from pathlib import Path
+import gzip
 
 _VALID_LVL_TYPES = ["pressure", "height"]
 
@@ -77,10 +80,22 @@ class Conventional(GSIdiag):
         Reads the data from the conventional diagnostic file during
         initialization into a multidimensional pandas dataframe.
         """
+        
         df_dict = {}
+        f = None
+        
+        try:
+            #Added by Aiden, capability to read gzipped netCDF files
+            if(self.path.endswith('.gz')):
+                with gzip.open(self.path, 'rb') as f_gz:
+                   # Read the file into a buffer (in memory not disk)
+                   buffer = io.BytesIO(f_gz.read())
+                   # Open from the buffer
+                   f = Dataset('dummy', mode='r', memory=buffer.read())
+            else:
+                f = Dataset(self.path, mode='r')
 
-        # Open netCDF file, store data into dictionary
-        with Dataset(self.path, mode='r') as f:
+            # Open netCDF file, store data into dictionary
             for var in f.variables:
                 # station_id and observation_class variables need
                 # to be converted from byte string to string
@@ -96,6 +111,15 @@ class Conventional(GSIdiag):
                 # Grab variables with only 'nobs' dimension
                 elif len(f.variables[var].shape) == 1:
                     df_dict[var] = f.variables[var][:]
+                    
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            sys.exit(-1)
+        
+        # Ensure we close the netcdf file since we didn't use 'with'
+        finally:
+            if f is not None:
+                f.close()
 
         # Create pandas dataframe from dict
         df = pd.DataFrame(df_dict)

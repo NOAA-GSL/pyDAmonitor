@@ -6,6 +6,8 @@ Altercations make for PyGSI:
 -Removed code that creates the multilayer indices in the df
 -Changed analysis use flags that were -1 to be 0
 -Removed Ozone and Radiance classes for now
+-Added code to read netCDF files that are gzipped
+-Error handling if file doesn't exist
 '''
 
 
@@ -81,11 +83,11 @@ class Conventional(GSIdiag):
         initialization into a multidimensional pandas dataframe.
         """
         
+        #Added by Aiden, capability to read gzipped netCDF files
         df_dict = {}
         f = None
         
         try:
-            #Added by Aiden, capability to read gzipped netCDF files
             if(self.path.endswith('.gz')):
                 with gzip.open(self.path, 'rb') as f_gz:
                    # Read the file into a buffer (in memory not disk)
@@ -112,9 +114,10 @@ class Conventional(GSIdiag):
                 elif len(f.variables[var].shape) == 1:
                     df_dict[var] = f.variables[var][:]
                     
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File '{self.path}' not found")
         except Exception as e:
-            print(f"An error occurred: {e}")
-            sys.exit(-1)
+            raise RuntimeError(f"An error occurred: {e}")
         
         # Ensure we close the netcdf file since we didn't use 'with'
         finally:

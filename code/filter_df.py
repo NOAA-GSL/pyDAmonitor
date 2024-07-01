@@ -4,6 +4,7 @@ import numpy as np
 
 def filter_df(
     df,
+    station_ids=None,
     obs_types=None,
     use=None,
     hem=None,
@@ -19,29 +20,30 @@ def filter_df(
     max/min pressure, latitude, longitude, and errors along with filtering by bufr
     obs_type (e.g., 187 or 287).
 
-        df       : a pandas df returned by PyGSI.Conventional.get_data() (NOTE) with some small changes
-                    being that indices are reset and use flag is 0 for not assimilated not -1
+        df         : a pandas df returned by inputing a netCDF file into diags.Conventional.get_data()
 
     Values needed from df:
-        use_flag : (array int) 1 f assimilated, 0 if not from netCDF file
-        obs_type : (array int) bufr ob obs_types from netCDF file <Observation_Type>
-        errorinv : (array float) from netCDF file <Errinv_Final>
-        lat      : (array float) from netCDF file <Latitude>
-        lon      : (array float) from netCDF file <Longitude>
-        pressure : (array float) from netCDF file <Pressure>
-        elevation: (array float) from netCDF file
+        station_ids: (array str) id of station observation was taken at
+        use_flag   : (array int) 1 f assimilated, 0 if not
+        obs_type   : (array int) bufr observation obs_types <Observation_Type>
+        errorinv   : (array float) observation <Errinv_Final>
+        lat        : (array float) observation <Latitude>
+        lon        : (array float) observation <Longitude>
+        pressure   : (array float) observation <Pressure>
+        elevation  : (array float) ovservation elevation
 
      Args:
-        obs_types    : (array int) bufr ob obs_types to filter by, see link 
+        station_ids: (array str) station_id or ids to filter by
+        obs_types  : (array int) bufr ob obs_types to filter by, see link 
                    https://emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_2.htm
-        use      : (int)   use flag for observation 1=assimilated, 0=not
-        p_range  : (float tuple) (min, max) pressure (mb) for including observation in df
-        hem      : (string) predetermined geographic extent (GLOBAL, NH, TR, SH, CONUS)
-        elv_range: (float tuple) (min, max) height (m) for including observation in df
-        lat_range: (float tuple) (min, max) latitude (deg N) for including observation in df
-        lon_range: (float tuple) (min, max) latitude (deg E) for including observation in df
-        err_range: (float tuple) (min, max) error std dev for including observation in df (not inversed)
-        inPlace  : (bool) True to filter current df, False to return reference to a new filtered df
+        use        : (int)   use flag for observation 1=assimilated, 0=not
+        p_range    : (float tuple) (min, max) pressure (mb) for including observation in df
+        hem        : (string) predetermined geographic extent (GLOBAL, NH, TR, SH, CONUS)
+        elv_range  : (float tuple) (min, max) height (m) for including observation in df
+        lat_range  : (float tuple) (min, max) latitude (deg N) for including observation in df
+        lon_range  : (float tuple) (min, max) latitude (deg E) for including observation in df
+        err_range  : (float tuple) (min, max) error std dev for including observation in df (not inversed)
+        inPlace    : (bool) True to filter current df, False to return reference to a new filtered df
 
     Returns:
         Returns new df is in_place is false and edits passed df is in_place is true 
@@ -50,7 +52,8 @@ def filter_df(
     #make a copy if this filter is not inplace, else leave it to alter passed df
     if not in_place:
         df = df.copy()
-
+    
+    station_id = df['station_id']
     use_flag = df['analysis_use_flag']
     obs_type = df['observation_type']
     errorinv = df['errinv_final']
@@ -83,6 +86,11 @@ def filter_df(
 
     # Initialize mask
     mask = [True] * len(obs_type)
+    
+    #filter for the desired station_ids
+    if station_ids is not None:
+        for ids in station_ids:
+            mask = np.logical_and(mask, station_id == ids)  # loop over all station_ids provided
     
     #filter for the desired obs types
     if obs_types is not None:

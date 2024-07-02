@@ -25,14 +25,14 @@ def base_plots(df_anl, df_ges, metadata, **args):
     
     # check if the dfs passed are contain wind, which would have speed and direction
     if(metadata['Variable'] == 'uv'):
-        print("Error: use wind_base_plots for wind datasets")
+        print("Error: Use wind_base_plots for wind datasets, not base_plots")
         return None
     
     # Variable name dict
     units_mapping = {
         't': ['Temperature', 'Degrees Fahrenheit'],
         'ps': ['Surface Pressure', 'Pascals'],
-        'q': ['Specfic Humidity', 'Grams Water Vapor per Kilograms of Air']
+        'q': ['Specfic Humidity', 'G Water Vapor per KG of Air']
     }
 
     # Initialize var_units based on metadata
@@ -132,7 +132,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
         ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
         # ax.set_extent([-180, 180, -90, 90])
         # Normalization for colorbar
-        norm = mcolors.TwoSlopeNorm(vmin = 0 - np.std(omf), vcenter=0, vmax = 0 + np.std(omf))
+        norm = mcolors.TwoSlopeNorm(vmin = 0 - (2*np.std(omf)), vcenter=0, vmax = 0 + np.std(omf))
         # # Plot the omf/oma data with two circle of different sizes (Option 1)
         # cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=120, cmap='PRGn', transform=ccrs.PlateCarree(),
         #                  edgecolors='black', linewidths=0.2, label='OmF', norm=norm)
@@ -149,7 +149,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
         #                  edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(), label='oma', norm=norm)
         # Plot (OmA - OmF) FmA (Option 3)
         fma = oma - omf
-        cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=fma, s=40, cmap='PRGn', transform=ccrs.PlateCarree(),
+        cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=fma, s=(np.abs(fma))*15, cmap='PRGn', transform=ccrs.PlateCarree(),
                          edgecolors='black', linewidths=0.2, label='FmA', norm=norm)
         # Add gridlines for latitude and longitude
         gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
@@ -205,7 +205,7 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
     
     # check if the dfs passed are contain wind, which would have speed and direction
     if(metadata['Variable'] != 'uv'):
-        print("Error: use base_plots for non wind datasets")
+        print("Error: Use base_plots for non wind datasets")
         return None
     
     print('------------ Wind Data Assimilation Statistics and Plots ------------\n\n')
@@ -287,6 +287,7 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
         
         plt.figure(figsize=(15, 20))
         
+        # Add maps features
         ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=260))
         ax.add_feature(cfeature.COASTLINE)
         ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='black')
@@ -294,18 +295,16 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
         if area_size < 50:
             ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
         
+        # Calculate dynamic scale based on the plot dimensions and reference arrow length
+        x_range = latlons[1].max() - latlons[1].min()
+        y_range = latlons[0].max() - latlons[0].min()
+        
         # Normalize magnitude so the arrows are all the same size
         u_norm = u / np.abs(mag)
         v_norm = v / np.abs(mag)
         
-        # Calculate dynamic scale based on the plot dimensions and reference arrow length
-        reference_arrow_length = 1
-        x_range = latlons[1].max() - latlons[1].min()
-        y_range = latlons[0].max() - latlons[0].min()
-        plot_diagonal = np.sqrt(x_range**2 + y_range**2)  # Diagonal length of the plot
-        scale = reference_arrow_length * plot_diagonal
-        
-        cs = plt.quiver(latlons[1], latlons[0], u_norm, v_norm, mag, scale=scale,
+        #2750 scale for CONUS
+        cs = plt.quiver(latlons[1], latlons[0], u_norm, v_norm, mag, scale = 4, scale_units = 'inches', units = 'inches', width = 0.01,
                         cmap='plasma', transform=ccrs.PlateCarree())
         # Add a colorbar
         cb = plt.colorbar(cs, shrink=0.3, pad=.04, extend='both')
@@ -317,6 +316,7 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
         plt.title(f"Wind Speed and Direction {title}")
         # Display the plot
         plt.show()
+    
     
 def assimilated_by_obs_plots(df_anl):
     

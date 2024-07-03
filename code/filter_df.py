@@ -128,7 +128,7 @@ def filter_df(
         mask = np.logical_and(mask, np.logical_and(errorinv >= error_min_inv, errorinv <= error_max_inv))
 
     if(all(mask)):
-        print("No obs removed from filtering")
+#         print("No obs removed from filtering")
         return df
     
     #filter dataframe, keeping only desired obs

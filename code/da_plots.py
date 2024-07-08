@@ -46,7 +46,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
         df_ges['observation'] = (1.8 * (df_ges['observation'] - 273.15)) + 32
         df_ges['omf_adjusted'] = 1.8 * df_ges['omf_adjusted']
         
-    print(f'------------ {var_name} Data Assimilation Statistics and Plots ------------')
+    print(f'------------ {var_name} Data Assimilation Statistics and Plots ------------\n\n')
         
     #* Create the bar plot by obs type showing proportional assimilated and total assimilated
     if(len(df_anl['observation_type'].unique()) > 1):
@@ -62,10 +62,10 @@ def base_plots(df_anl, df_ges, metadata, **args):
     oma = df_anl['omf_adjusted']
     
     # Create subplots
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+    fig, axes = plt.subplots(1, 3, figsize=(14, 3))
 
     #TODO Add customized labels based on variable type
-    datasets = [(obs, 'Observation'),
+    datasets = [(obs, 'Obs'),
                 (omf, 'OmF'),
                 (oma, 'OmA')]
 
@@ -83,7 +83,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
         # Add labels
         ax.set_xlabel(var_units)
         ax.set_ylabel('Count')
-        ax.set_title(label + " Histogram", fontsize=14)
+        ax.set_title(f'{var_name} {label} Histogram', fontsize=14)
 
     # Add some more space between subplots
     plt.subplots_adjust(wspace=0.3)
@@ -116,10 +116,10 @@ def base_plots(df_anl, df_ges, metadata, **args):
         gl.top_labels = False
         gl.right_labels = False
         # Add a colorbar
-        cb = plt.colorbar(cs, ax=ax, shrink=0.3, pad=.04, extend='both')
+        cb = plt.colorbar(cs, ax=ax, shrink=0.2, pad=.04, extend='both')
         cb.set_label(var_units)
         # Set title
-        ax.set_title('Observations Map', fontsize=14)
+        ax.set_title(f'{var_name} Obs', fontsize=14)
         plt.tight_layout()
         plt.show()
         
@@ -140,27 +140,27 @@ def base_plots(df_anl, df_ges, metadata, **args):
         # cs2 = ax.scatter(latlons_anl[1], latlons_anl[0], c=oma, s=35, cmap='PRGn', transform=ccrs.PlateCarree(),
         #                  edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
         # Plot the omf/oma data with two sqaures next to each other (Option 2)
-        # lat_range = latlons_ges[0].max() - latlons_ges[0].min()
-        # offset_ratio = 145
-        # offset = lat_range / offset_ratio
-        # cs1 = ax.scatter(latlons_ges[1], latlons_ges[0]+offset, c=omf, s=30, cmap='PRGn', marker='s', 
-        #                  edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(), label='omf', norm=norm)
-        # cs2 = ax.scatter(latlons_anl[1], latlons_anl[0]-offset, c=oma, s=30, cmap='PRGn', marker='s', 
-        #                  edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(), label='oma', norm=norm)
+        lat_range = latlons_ges[0].max() - latlons_ges[0].min()
+        offset_ratio = 145
+        offset = lat_range / offset_ratio
+        cs1 = ax.scatter(latlons_anl[1], latlons_anl[0]+offset, c=oma, s=30, cmap='PRGn', marker='s', 
+                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(), label='Top - OmA', norm=norm)
+        cs2 = ax.scatter(latlons_ges[1], latlons_ges[0]-offset, c=omf, s=30, cmap='PRGn', marker='s', 
+                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(), label='Bottom - OmF', norm=norm)
         # Plot (OmA - OmF) FmA (Option 3)
-        fma = oma - omf
-        cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=fma, s=(np.abs(fma))*15, cmap='PRGn', transform=ccrs.PlateCarree(),
-                         edgecolors='black', linewidths=0.2, label='FmA', norm=norm)
+        # fma = oma - omf
+        # cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=fma, s=(np.abs(fma))*15, cmap='PRGn', transform=ccrs.PlateCarree(),
+        #                  edgecolors='black', linewidths=0.2, label='FmA', norm=norm)
         # Add gridlines for latitude and longitude
         gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
         gl.top_labels = False
         gl.right_labels = False
         # Add a colorbar adn legend
-        cb = plt.colorbar(cs1, ax=ax, shrink=0.3, pad=.04, extend='both')
+        cb = plt.colorbar(cs1, ax=ax, shrink=0.2, pad=.04, extend='both')
         cb.set_label(var_units)
         ax.legend(loc='upper right', fontsize='medium', framealpha=0.9)
         # Set title
-        ax.set_title('OmF and OmA Comparison', fontsize=14)
+        ax.set_title(f'{var_name} OmF and OmA Comparison', fontsize=14)
         plt.tight_layout()
         plt.show()
         
@@ -168,7 +168,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
         # Create large scale spatial subplots
         fig, axes = plt.subplots(3, 1, figsize=(15,20), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
-        datasets = [(obs, 'Observation', 'Reds', latlons_ges),
+        datasets = [(obs, 'Obs', 'Reds', latlons_ges),
                     (omf, 'OmF', 'PRGn', latlons_ges),
                     (oma, 'OmA', 'PRGn', latlons_anl)]
         
@@ -181,7 +181,7 @@ def base_plots(df_anl, df_ges, metadata, **args):
             ax.add_feature(cfeature.STATES, edgecolor='black')
             # ax.set_extent([-180, 180, -90, 90])
             # Normalization for diverging cmaps, none for increasing cmaps for obs map
-            if(label == "Observation"):
+            if(label == "Obs"):
                 norm=None
             else:
                 norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(data)*2), vcenter=0, vmax = 0 + (np.std(data)*2))
@@ -192,10 +192,10 @@ def base_plots(df_anl, df_ges, metadata, **args):
             gl.top_labels = False
             gl.right_labels = False
             # Add a colorbar
-            cb = plt.colorbar(cs, ax=ax, shrink=0.3, pad=.04, extend='both')
+            cb = plt.colorbar(cs, ax=ax, shrink=0.2, pad=.04, extend='both')
             cb.set_label(var_units)
             # Set title
-            ax.set_title(label+" Map", fontsize=14)
+            ax.set_title(f'{var_name} {label} Map', fontsize=14)
             
         plt.tight_layout()
         plt.show()
@@ -239,13 +239,13 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
     fig, axes = plt.subplots(3, 3, figsize=(16, 5))
 
     #TODO Add customized labels based on variable type
-    datasets = [(u_obs, 'U Observation'),
+    datasets = [(u_obs, 'U Obs'),
                  (u_omf, 'U OmF'),
                  (u_oma, 'U OmA'),
-                 (v_obs, 'V Observation'),
+                 (v_obs, 'V Obs'),
                  (v_omf, 'V OmF'),
                  (v_oma, 'V OmA'),
-                 (mag_obs, 'Wind Speed Observation'),
+                 (mag_obs, 'Wind Speed Obs'),
                  (mag_omf, 'Wind Speed OmF'),
                  (mag_oma, 'Wind Speed OmA')]
 
@@ -264,7 +264,7 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
         # Add labels
         ax.set_xlabel(label)
         ax.set_ylabel('Count')
-        ax.set_title(label + " Histogram", fontsize=14)
+        ax.set_title(f'Wind {label} Histogram', fontsize=14)
 
     # Add some more space between subplots
     plt.subplots_adjust(wspace=0.3, hspace=1)
@@ -275,7 +275,7 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
     
     # Define your datasets and metadata
     datasets = [
-        ('Observations', df_ges, u_obs, v_obs, mag_obs),
+        ('Obs', df_ges, u_obs, v_obs, mag_obs),
         ('OmF', df_ges, u_omf, v_omf, mag_omf),
         ('OmA', df_anl, u_oma, v_oma, mag_oma)
     ]
@@ -304,10 +304,10 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
         v_norm = v / np.abs(mag)
         
         #2750 scale for CONUS
-        cs = plt.quiver(latlons[1], latlons[0], u_norm, v_norm, mag, scale = 4, scale_units = 'inches', units = 'inches', width = 0.01,
+        cs = plt.quiver(latlons[1], latlons[0], u_norm, v_norm, mag, scale = 5, scale_units = 'inches', units = 'inches', width = 0.02,
                         cmap='plasma', transform=ccrs.PlateCarree())
         # Add a colorbar
-        cb = plt.colorbar(cs, shrink=0.3, pad=.04, extend='both')
+        cb = plt.colorbar(cs, shrink=0.2, pad=.04, extend='both')
         cb.set_label('Wind Speed')
         # Add gridlines for latitude and longitude
         gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)

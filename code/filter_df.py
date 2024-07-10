@@ -3,7 +3,7 @@
 import numpy as np
 
 def filter_df(
-    df,
+    dfs,
     station_ids=None,
     obs_types=None,
     use=None,
@@ -20,7 +20,8 @@ def filter_df(
     max/min pressure, latitude, longitude, and errors along with filtering by bufr
     obs_type (e.g., 187 or 287).
 
-        df         : a pandas df returned by inputing a netCDF file into diags.Conventional.get_data()
+        dfs         : a list of pandas dfs, each returned by inputing a netCDF file into
+                        diags.Conventional.get_data()
 
     Values needed from df:
         station_ids: (array str) id of station observation was taken at
@@ -46,92 +47,100 @@ def filter_df(
         inPlace    : (bool) True to filter current df, False to return reference to a new filtered df
 
     Returns:
-        Returns new df is in_place is false and edits passed df is in_place is true 
+        Returns new dfs is in_place is false and edits passed dfs is in_place is true 
     """
-
-    #make a copy if this filter is not inplace, else leave it to alter passed df
-    if not in_place:
-        df = df.copy()
     
-    station_id = df['station_id']
-    use_flag = df['analysis_use_flag']
-    obs_type = df['observation_type']
-    errorinv = df['errinv_final']
-    lat =  df['latitude']
-    lon = df['longitude']
-    pressure = df['pressure']
-    elevation = df['station_elevation']
-
-    # if hem is provided, override the lat/lon min/maxes
-    if hem is not None:
-
-        if (hem == "GLOBAL"):
-            lat_range = (-90.0, 90.0)
-            lon_range = (0.0, 360.0)
-        elif (hem == "NH"):
-            lat_range = (-90.0, -30.0)
-            lon_range = (0.0, 360.0)
-        elif (hem == "TR"):
-            lat_range = (-30.0, 30.0)
-            lon_range = (0.0, 360.0)
-        elif (hem == "SH"):
-            lat_range = (-90.0, 90.0)
-            lon_range = (0.0, 360.0)
-        elif (hem == "CONUS"):
-            lat_range = (25.0, 50.0) #! changed from 27 to 25
-            lon_range = (235.0, 295.0)
-        else:
-            msg = 'hemispheres must be: GLOBAL, NH, TR, SH, CONUS, or None'
-            raise ValueError(msg)
-
-    # Initialize mask
-    mask = [True] * len(obs_type)
+    fil_dfs = []
     
-    #filter for the desired station_ids
-    if station_ids is not None:
-        for ids in station_ids:
-            mask = np.logical_and(mask, station_id == ids)  # loop over all station_ids provided
-    
-    #filter for the desired obs types
-    if obs_types is not None:
-        for t in obs_types:
-            mask = np.logical_and(mask, obs_type == t)  # loop over all obs_types provided
+    for df in dfs:
 
-    # filter for desired use flag if provided
-    if use is not None:
-        mask = np.logical_and(mask, use == use_flag)
+        #make a copy if this filter is not inplace, else leave it to alter passed df
+        if not in_place:
+            df = df.copy()
 
-    # filter by pressure if provided
-    if p_range is not None:
-        mask = np.logical_and(mask, np.logical_and(pressure >= p_range[0], pressure <= p_range[1]))
+        station_id = df['station_id']
+        use_flag = df['analysis_use_flag']
+        obs_type = df['observation_type']
+        errorinv = df['errinv_final']
+        lat =  df['latitude']
+        lon = df['longitude']
+        pressure = df['pressure']
+        elevation = df['station_elevation']
 
-    # filter by elevation if provided
-    if elv_range is not None:
-        mask = np.logical_and(mask, np.logical_and(elevation >= elv_range[0], elevation <= elv_range[1]))
+        # if hem is provided, override the lat/lon min/maxes
+        if hem is not None:
 
-    # filter bound by lats if provided
-    if lat_range is not None:
-        mask = np.logical_and(mask, np.logical_and(lat >= lat_range[0], lat <= lat_range[1]))
+            if (hem == "GLOBAL"):
+                lat_range = (-90.0, 90.0)
+                lon_range = (0.0, 360.0)
+            elif (hem == "NH"):
+                lat_range = (-90.0, -30.0)
+                lon_range = (0.0, 360.0)
+            elif (hem == "TR"):
+                lat_range = (-30.0, 30.0)
+                lon_range = (0.0, 360.0)
+            elif (hem == "SH"):
+                lat_range = (-90.0, 90.0)
+                lon_range = (0.0, 360.0)
+            elif (hem == "CONUS"):
+                lat_range = (25.0, 50.0) #! changed from 27 to 25
+                lon_range = (235.0, 295.0)
+            else:
+                msg = 'hemispheres must be: GLOBAL, NH, TR, SH, CONUS, or None'
+                raise ValueError(msg)
 
-    # filter bound by lons if provided
-    if lon_range is not None:
-        mask = np.logical_and(mask, np.logical_and(lon >= lon_range[0], lon <= lon_range[1]))
+        # Initialize mask
+        mask = [True] * len(obs_type)
 
-    #set error mins and maxs, invert them, and filter for desired error values if provided
-    if err_range is not None:
-        error_min_inv = err_range[0]
-        if(err_range[0]!=0):
-            error_min_inv = 1.0 / err_range[0]
-        error_max_inv = err_range[1]
-        if(err_range[1]!=0):
-            error_max_inv = 1.0 / err_range[1]
-        mask = np.logical_and(mask, np.logical_and(errorinv >= error_min_inv, errorinv <= error_max_inv))
+        #filter for the desired station_ids
+        if station_ids is not None:
+            for ids in station_ids:
+                mask = np.logical_and(mask, station_id == ids)  # loop over all station_ids provided
 
-    if(all(mask)):
-#         print("No obs removed from filtering")
-        return df
-    
-    #filter dataframe, keeping only desired obs
-    df.drop(df[~mask].index, inplace = True)
+        #filter for the desired obs types
+        if obs_types is not None:
+            for t in obs_types:
+                mask = np.logical_and(mask, obs_type == t)  # loop over all obs_types provided
 
-    return df
+        # filter for desired use flag if provided
+        if use is not None:
+            mask = np.logical_and(mask, use == use_flag)
+
+        # filter by pressure if provided
+        if p_range is not None:
+            mask = np.logical_and(mask, np.logical_and(pressure >= p_range[0], pressure <= p_range[1]))
+
+        # filter by elevation if provided
+        if elv_range is not None:
+            mask = np.logical_and(mask,
+                                  np.logical_and(elevation >= elv_range[0], elevation <= elv_range[1]))
+
+        # filter bound by lats if provided
+        if lat_range is not None:
+            mask = np.logical_and(mask, np.logical_and(lat >= lat_range[0], lat <= lat_range[1]))
+
+        # filter bound by lons if provided
+        if lon_range is not None:
+            mask = np.logical_and(mask, np.logical_and(lon >= lon_range[0], lon <= lon_range[1]))
+
+        #set error mins and maxs, invert them, and filter for desired error values if provided
+        if err_range is not None:
+            error_min_inv = err_range[0]
+            if(err_range[0]!=0):
+                error_min_inv = 1.0 / err_range[0]
+            error_max_inv = err_range[1]
+            if(err_range[1]!=0):
+                error_max_inv = 1.0 / err_range[1]
+            mask = np.logical_and(mask, np.logical_and(errorinv >= error_min_inv,
+                                                       errorinv <= error_max_inv))
+
+        if(all(mask)):
+    #         print("No obs removed from filtering")
+            return df
+
+        #filter dataframe, keeping only desired obs
+        df.drop(df[~mask].index, inplace = True)
+        
+        fil_dfs.append(df)
+
+    return fil_dfs

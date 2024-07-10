@@ -7,13 +7,14 @@ Automate basic plot display
 
 import numpy as np
 import pandas as pd
+import os
 import matplotlib.pylab as plt
 import matplotlib.colors as mcolors
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from metpy.plots import USCOUNTIES
 
-def base_plots(df_anl, df_ges, metadata, **args):
+def base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
 
     '''
     df_anl  : pd dataframe with analysis returned by pyDAmonitor.diags.get_data() 
@@ -38,6 +39,8 @@ def base_plots(df_anl, df_ges, metadata, **args):
     # Initialize var_units based on metadata
     var_units = units_mapping.get(metadata['Variable'], None)[1]
     var_name = units_mapping.get(metadata['Variable'], None)[0]
+    
+    date = metadata['Date'].strftime('%Y%m%d%H')
 
     # Perform conversions from K to F if the variable is temperature
     if metadata['Variable'] == 't':
@@ -46,11 +49,17 @@ def base_plots(df_anl, df_ges, metadata, **args):
         df_ges['observation'] = (1.8 * (df_ges['observation'] - 273.15)) + 32
         df_ges['omf_adjusted'] = 1.8 * df_ges['omf_adjusted']
         
+    #For saving plots if specified
+    dir_name = None
+    if(save_plots):
+        dir_name = metadata['Variable'] + "_" + date + "_plots"
+        os.makedirs(dir_name, exist_ok=True)
+        
     print(f'------------ {var_name} Data Assimilation Statistics and Plots ------------\n\n')
         
     #* Create the bar plot by obs type showing proportional assimilated and total assimilated
     if(len(df_anl['observation_type'].unique()) > 1):
-        assimilated_by_obs_plots(df_anl)
+        assimilated_by_obs_plots(df_anl, dir_name=dir_name)
     else:
         prop_assimilated = df_anl['analysis_use_flag'].mean()
         ob_type = df_anl['observation_type'].iloc[0]
@@ -87,7 +96,12 @@ def base_plots(df_anl, df_ges, metadata, **args):
 
     # Add some more space between subplots
     plt.subplots_adjust(wspace=0.3)
-    plt.show()
+    
+    if(save_plots):
+        plt.savefig(f'{dir_name}/{var_name}_histograms', bbox_inches='tight')
+        plt.close(fig)
+    else:
+        plt.show()
     
     #* Create spatial plots of obs, omf, and oma
     #get lats and lons
@@ -96,13 +110,14 @@ def base_plots(df_anl, df_ges, metadata, **args):
     
     #? what is the best way to handle having small scale base_plots and large scale base_plots?
     
-    area_size = (latlons_ges[0].max() - latlons_ges[0].min()) * (latlons_ges[1].max() - latlons_ges[1].min())
+    area_size = (latlons_ges[0].max()-latlons_ges[0].min())*(latlons_ges[1].max()-latlons_ges[1].min())
     
     if(area_size<50): #(50 is arbitrary, meant to signify "zoomed in")
         #create small scale spatial plots 
         
         #create obs spatial plot
-        fig, ax = plt.subplots(1, 1, figsize=(15,20), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
+        fig, ax = plt.subplots(1, 1, figsize=(12,8),
+                               subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         ax.add_feature(cfeature.COASTLINE)
         ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='black')
@@ -110,7 +125,8 @@ def base_plots(df_anl, df_ges, metadata, **args):
         ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
         # ax.set_extent([-180, 180, -90, 90])
         # Plot the scatter data with smaller and more transparent points
-        cs = ax.scatter(latlons_ges[1], latlons_ges[0], c=obs, s=20, cmap='Reds', alpha=0.7, transform=ccrs.PlateCarree())
+        cs = ax.scatter(latlons_ges[1], latlons_ges[0], c=obs, s=20, cmap='Reds', alpha=0.7,
+                        transform=ccrs.PlateCarree())
         # Add gridlines for latitude and longitude
         gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
         gl.top_labels = False
@@ -121,10 +137,15 @@ def base_plots(df_anl, df_ges, metadata, **args):
         # Set title
         ax.set_title(f'{var_name} Obs', fontsize=14)
         plt.tight_layout()
-        plt.show()
+        if(save_plots):
+            plt.savefig(f'{dir_name}/{var_name}_obs_map')
+            plt.close(fig)
+        else:
+            plt.show()
         
         #create spatial plot with omf and oma
-        fig, ax = plt.subplots(1, 1, figsize=(15,20), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
+        fig, ax = plt.subplots(1, 1, figsize=(12,8),
+                               subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         ax.add_feature(cfeature.COASTLINE)
         ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='black')
@@ -134,23 +155,28 @@ def base_plots(df_anl, df_ges, metadata, **args):
         # Normalization for colorbar
         norm = mcolors.TwoSlopeNorm(vmin = 0 - (2*np.std(omf)), vcenter=0, vmax = 0 + np.std(omf))
         # # Plot the omf/oma data with two circle of different sizes (Option 1)
-        # cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=120, cmap='PRGn', transform=ccrs.PlateCarree(),
-        #                  edgecolors='black', linewidths=0.2, label='OmF', norm=norm)
+#         cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=120, cmap='PRGn',
+#                          transform=ccrs.PlateCarree(),
+#                          edgecolors='black', linewidths=0.2, label='OmF', norm=norm)
         
-        # cs2 = ax.scatter(latlons_anl[1], latlons_anl[0], c=oma, s=35, cmap='PRGn', transform=ccrs.PlateCarree(),
-        #                  edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
+#         cs2 = ax.scatter(latlons_anl[1], latlons_anl[0], c=oma, s=35, cmap='PRGn',
+#                          transform=ccrs.PlateCarree(),
+#                          edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
         # Plot the omf/oma data with two sqaures next to each other (Option 2)
         lat_range = latlons_ges[0].max() - latlons_ges[0].min()
         offset_ratio = 145
         offset = lat_range / offset_ratio
         cs1 = ax.scatter(latlons_anl[1], latlons_anl[0]+offset, c=oma, s=30, cmap='PRGn', marker='s', 
-                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(), label='Top - OmA', norm=norm)
+                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
+                         label='Top - OmA', norm=norm)
         cs2 = ax.scatter(latlons_ges[1], latlons_ges[0]-offset, c=omf, s=30, cmap='PRGn', marker='s', 
-                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(), label='Bottom - OmF', norm=norm)
+                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
+                         label='Bottom - OmF', norm=norm)
         # Plot (OmA - OmF) FmA (Option 3)
-        # fma = oma - omf
-        # cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=fma, s=(np.abs(fma))*15, cmap='PRGn', transform=ccrs.PlateCarree(),
-        #                  edgecolors='black', linewidths=0.2, label='FmA', norm=norm)
+#         fma = oma - omf
+#         cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=fma, s=(np.abs(fma))*15, cmap='PRGn', 
+#                          transform=ccrs.PlateCarree(),
+#                          edgecolors='black', linewidths=0.2, label='FmA', norm=norm)
         # Add gridlines for latitude and longitude
         gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
         gl.top_labels = False
@@ -162,11 +188,16 @@ def base_plots(df_anl, df_ges, metadata, **args):
         # Set title
         ax.set_title(f'{var_name} OmF and OmA Comparison', fontsize=14)
         plt.tight_layout()
-        plt.show()
+        
+        if(save_plots):
+            plt.savefig(f'{dir_name}/omf_oma_map')
+            plt.close(fig)
+        else:
+            plt.show()
         
     else:
         # Create large scale spatial subplots
-        fig, axes = plt.subplots(3, 1, figsize=(15,20), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
+        fig, axes = plt.subplots(3, 1, figsize=(12,8), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         datasets = [(obs, 'Obs', 'Reds', latlons_ges),
                     (omf, 'OmF', 'PRGn', latlons_ges),
@@ -186,7 +217,8 @@ def base_plots(df_anl, df_ges, metadata, **args):
             else:
                 norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(data)*2), vcenter=0, vmax = 0 + (np.std(data)*2))
             # Plot the scatter data with smaller and more transparent points
-            cs = ax.scatter(coords[1], coords[0], c=data, s=20, cmap=color, alpha=0.7, transform=ccrs.PlateCarree(), norm=norm)
+            cs = ax.scatter(coords[1], coords[0], c=data, s=20, cmap=color, alpha=0.7,
+                            transform=ccrs.PlateCarree(), norm=norm)
             # Add gridlines for latitude and longitude
             gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
             gl.top_labels = False
@@ -198,15 +230,29 @@ def base_plots(df_anl, df_ges, metadata, **args):
             ax.set_title(f'{var_name} {label} Map', fontsize=14)
             
         plt.tight_layout()
-        plt.show()
+        
+        if(save_plots):
+            plt.savefig(f'{dir_name}/{var_name}_obs_omf_oma_maps')
+            plt.close(fig)
+        else:
+            plt.show()
         
         
-def wind_base_plots(df_anl, df_ges, metadata, **args):
+def wind_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
     
     # check if the dfs passed are contain wind, which would have speed and direction
     if(metadata['Variable'] != 'uv'):
         print("Error: Use base_plots for non wind datasets")
         return None
+    
+    # Get date from metadata
+    date = metadata['Date'].strftime('%Y%m%d%H')
+    
+    #For saving plots if specified
+    dir_name = None
+    if(save_plots):
+        dir_name = f'wind_{date}_plots'
+        os.makedirs(dir_name, exist_ok=True)
     
     print('------------ Wind Data Assimilation Statistics and Plots ------------\n\n')
     
@@ -268,7 +314,12 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
 
     # Add some more space between subplots
     plt.subplots_adjust(wspace=0.3, hspace=1)
-    plt.show()
+    
+    if(save_plots):
+        plt.savefig(f'{dir_name}/wind_histograms', bbox_inches='tight')
+        plt.close(fig)
+    else:
+        plt.show()
     
     
     # #* Create spatial plots of obs, omf, and oma
@@ -279,13 +330,15 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
         ('OmF', df_ges, u_omf, v_omf, mag_omf),
         ('OmA', df_anl, u_oma, v_oma, mag_oma)
     ]
-
+    
+    #Loop thru each dataset
     for title, df, u, v, mag in datasets:
         latlons = (df['latitude'], df['longitude'])
-    
+        
+        # Get size of geographic extent
         area_size = (latlons[0].max() - latlons[0].min()) * (latlons[1].max() - latlons[1].min())
         
-        plt.figure(figsize=(15, 20))
+        fig = plt.figure(figsize=(15, 10))
         
         # Add maps features
         ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=260))
@@ -303,24 +356,36 @@ def wind_base_plots(df_anl, df_ges, metadata, **args):
         u_norm = u / np.abs(mag)
         v_norm = v / np.abs(mag)
         
-        #2750 scale for CONUS
-        cs = plt.quiver(latlons[1], latlons[0], u_norm, v_norm, mag, scale = 5, scale_units = 'inches', units = 'inches', width = 0.02,
+        # Plot wind as arrows
+        cs = plt.quiver(latlons[1], latlons[0], u_norm, v_norm, mag, scale = 5, scale_units = 'inches',
+                        units = 'inches', width = 0.02,
                         cmap='plasma', transform=ccrs.PlateCarree())
+        
         # Add a colorbar
         cb = plt.colorbar(cs, shrink=0.2, pad=.04, extend='both')
         cb.set_label('Wind Speed')
+        
         # Add gridlines for latitude and longitude
         gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
         gl.top_labels = False
         gl.right_labels = False
         plt.title(f"Wind Speed and Direction {title}")
-        # Display the plot
-        plt.show()
+        
+        # Display or save the plot
+        if(save_plots):
+            plt.savefig(f'{dir_name}/wind_speed_direction_{title}_map')
+            plt.close(fig)
+        else:
+            plt.show()
     
     
-def assimilated_by_obs_plots(df_anl):
+def assimilated_by_obs_plots(df_anl, dir_name):
     
-    #* Create the bar plot by obs type showing proportional assimilated and total assimilated
+    '''
+    Create the bar plot by obs type showing proportional assimilated and total assimilated
+    
+    If dir_name is None, then we know save_plots is False
+    '''
     
     #calculated prop and totals
     prop_assim_by_obs_type_anl = pd.DataFrame(df_anl.groupby('observation_type')['analysis_use_flag'].mean())
@@ -349,5 +414,9 @@ def assimilated_by_obs_plots(df_anl):
     axes[1].set_ylabel('Total Assimilated')
     axes[1].set_title('Total Assimilated Obs by Obs Type')
         
-    plt.show()
-    
+    if dir_name is None:
+        plt.show()
+    else:
+        plt.savefig(f'{dir_name}/{var_name}_{label}_map')
+        plt.clf('assimilated_sum_by_obstype')
+        

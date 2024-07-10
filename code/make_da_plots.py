@@ -14,7 +14,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from metpy.plots import USCOUNTIES
 
-def base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
+def make_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
 
     '''
     df_anl  : pd dataframe with analysis returned by pyDAmonitor.diags.get_data() 
@@ -238,7 +238,7 @@ def base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
             plt.show()
         
         
-def wind_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
+def make_wind_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
     
     # check if the dfs passed are contain wind, which would have speed and direction
     if(metadata['Variable'] != 'uv'):

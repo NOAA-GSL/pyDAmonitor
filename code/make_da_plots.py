@@ -14,11 +14,12 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from metpy.plots import USCOUNTIES
 
-def make_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
+def make_base_plots(dfs, metadata, save_plots=False, **args):
 
     '''
-    df_anl  : pd dataframe with analysis returned by pyDAmonitor.diags.get_data() 
-    df_ges  : pd dataframe with guess/forecast returned by pyDAmonitor.diags.get_data() 
+    dfs.    : list of dataframes to make plots of, should be ordered as followes (ges, anl, anl2, etc)
+              all dataframes should be returned by pyDAmonitor.diags.get_data() (at the moment, only 
+              [ges, anl] supported
     metadata: metadata dict returned by Conventional.metadata from either ges or anl file
     '''
     
@@ -37,23 +38,25 @@ def make_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
     }
 
     # Initialize var_units based on metadata
-    var_units = units_mapping.get(metadata['Variable'], None)[1]
-    var_name = units_mapping.get(metadata['Variable'], None)[0]
+    var_units = units_mapping.get(metadata['Variable'])[1]
+    var_name = units_mapping.get(metadata['Variable'])[0]
     
     date = metadata['Date'].strftime('%Y%m%d%H')
 
     # Perform conversions from K to F if the variable is temperature
     if metadata['Variable'] == 't':
-        df_anl['observation'] = (1.8 * (df_anl['observation'] - 273.15)) + 32
-        df_anl['omf_adjusted'] = 1.8 * df_anl['omf_adjusted']
-        df_ges['observation'] = (1.8 * (df_ges['observation'] - 273.15)) + 32
-        df_ges['omf_adjusted'] = 1.8 * df_ges['omf_adjusted']
+        for df in dfs:
+            df['observation'] = (1.8 * (df['observation'] - 273.15)) + 32
+            df['omf_adjusted'] = 1.8 * df['omf_adjusted']
         
     #For saving plots if specified
     dir_name = None
     if(save_plots):
         dir_name = metadata['Variable'] + "_" + date + "_plots"
         os.makedirs(dir_name, exist_ok=True)
+        
+    df_ges = dfs[0]
+    df_anl = dfs[1]
         
     print(f'------------ {var_name} Data Assimilation Statistics and Plots ------------\n\n')
         

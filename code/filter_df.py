@@ -2,19 +2,7 @@
 
 import numpy as np
 
-def filter_df(
-    dfs,
-    station_ids=None,
-    obs_types=None,
-    use=None,
-    hem=None,
-    p_range = None,
-    elv_range = None,
-    lat_range = None,
-    lon_range = None,
-    err_range = None,
-    in_place = False
-):
+def filter_df(dfs, **kwargs):
     """
     Create the bool array mask to filter df by. Considers obs filtered by the use flag,
     max/min pressure, latitude, longitude, and errors along with filtering by bufr
@@ -49,6 +37,18 @@ def filter_df(
     Returns:
         Returns new dfs is in_place is false and edits passed dfs is in_place is true 
     """
+    
+    # Default values for parameters
+    station_ids = kwargs.get('station_ids', None)
+    obs_types = kwargs.get('obs_types', None)
+    use = kwargs.get('use', None)
+    hem = kwargs.get('hem', None)
+    p_range = kwargs.get('p_range', None)
+    elv_range = kwargs.get('elv_range', None)
+    lat_range = kwargs.get('lat_range', None)
+    lon_range = kwargs.get('lon_range', None)
+    err_range = kwargs.get('err_range', None)
+    in_place = kwargs.get('in_place', False)
     
     fil_dfs = []
     

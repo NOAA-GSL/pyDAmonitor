@@ -18,7 +18,7 @@ def plot_time_series(path, var, anl_ges, s_time, f_time, station_ids=None, obs_t
     
     Parameters:
     
-    path       : (str) path to directory containing multiple 
+    path       : (str) path to directory containing multiple day directories
     var        : (str) variable of interest
     anl_ges    : (str) 'anl', 'ges', or 'both if you want to plot analysis or guess
     model      : (str) which model, 'rtma' or 'rrfs' (NOT IMPLEMENTED YET)
@@ -54,7 +54,7 @@ def plot_time_series(path, var, anl_ges, s_time, f_time, station_ids=None, obs_t
         anl_omfs = get_omfs(anl_fps, station_ids=station_ids, obs_types=obs_types)
         series['anl'] = anl_omfs
        
-    make_plot(series, date_times)
+    make_plot(series, date_times, var)
     
 
 def get_gsi_fps(path, var, anl_ges, date_times):
@@ -160,16 +160,28 @@ def get_omfs(fps, station_ids=None, obs_types=None):
             
     return hourly_omf
 
-def make_plot(series, times):
+def make_plot(series, times, var):
     
     '''
-    Make time series plot of omf/oma
+    Make time series plot of omf/oma, can plot both omf and oma of the same time and var
     
     Parameters:
     
-    hourly_omf : (float array list) returned by get_omfs, omf for each hour on a time domain, max 6 series
-    times      : (datetime array) returned by get_gsi_fps, corresponding datetimes for each hour
+    series: (list of float arrays) each returned by get_omfs, omf for each hour on a time domain, max 6
+    times : (datetime array) returned by get_gsi_fps, corresponding datetimes for each hour
+    var   : (str) variable of the series
     '''
+    
+    # Variable name dict
+    units_mapping = {
+        't': ['Temperature', 'Degrees Fahrenheit'],
+        'ps': ['Surface Pressure', 'Pascals'],
+        'q': ['Specfic Humidity', 'G Water Vapor per KG of Air']
+    }
+    
+    # Initialize var_units based on metadata
+    var_units = units_mapping.get(var)[1]
+    var_name = units_mapping.get(var)[0]
 
     # Create the plot
     plt.figure(figsize=(10, 5))
@@ -186,7 +198,7 @@ def make_plot(series, times):
         # Highlight NaN points
         nan_indices = np.isnan(data)
         plt.scatter(times[nan_indices], np.zeros(sum(nan_indices)), color='red', 
-                    label='NaN Points')
+                    label='No Data')
         
         max_val = max((np.nanmax(np.abs(data)) * 1.1), max_val)
         
@@ -197,8 +209,8 @@ def make_plot(series, times):
     plt.ylim(-max_val, max_val)
 
     # plt.xlabel('Date')
-    plt.ylabel('OmF')
-    plt.title('OmF Time Series Plot')
+    plt.ylabel(var_units)
+    plt.title(f'{var_name} DA Time Series Plot')
     plt.grid(True)
     plt.legend()
 

@@ -241,7 +241,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
             plt.show()
         
         
-def make_wind_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
+def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
     
     # check if the dfs passed are contain wind, which would have speed and direction
     if(metadata['Variable'] != 'uv'):
@@ -256,6 +256,9 @@ def make_wind_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
     if(save_plots):
         dir_name = f'wind_{date}_plots'
         os.makedirs(dir_name, exist_ok=True)
+        
+    df_ges = dfs[0]
+    df_anl = dfs[1]
     
     print('------------ Wind Data Assimilation Statistics and Plots ------------\n\n')
     
@@ -269,7 +272,7 @@ def make_wind_base_plots(df_anl, df_ges, metadata, save_plots=False, **args):
     
     #* Create the bar plot by obs type showing proportional assimilated and total assimilated
     if(len(df_anl['observation_type'].unique()) > 1):
-        assimilated_by_obs_plots(df_anl)
+        assimilated_by_obs_plots(df_anl, dir_name)
     else:
         prop_assimilated = df_anl['analysis_use_flag'].mean()
         ob_type = df_anl['observation_type'].iloc[0]
@@ -394,7 +397,7 @@ def assimilated_by_obs_plots(df_anl, dir_name):
     prop_assim_by_obs_type_anl = pd.DataFrame(df_anl.groupby('observation_type')['analysis_use_flag'].mean())
     total_assim_by_obs_type_anl = pd.DataFrame(df_anl.groupby('observation_type')['analysis_use_flag'].sum())
     
-    fig, axes = plt.subplots(1, 2, figsize = (18, 6))
+    fig, axes = plt.subplots(1, 2, figsize = (12, 4))
     
     #create bars for prop
     axes[0].bar(range(len(prop_assim_by_obs_type_anl['analysis_use_flag'])),
@@ -420,6 +423,6 @@ def assimilated_by_obs_plots(df_anl, dir_name):
     if dir_name is None:
         plt.show()
     else:
-        plt.savefig(f'{dir_name}/{var_name}_{label}_map')
-        plt.clf('assimilated_sum_by_obstype')
+        plt.savefig(f'{dir_name}/assimilated_obs_plots')
+        plt.close(fig)
         

@@ -5,13 +5,12 @@ Driver function for plotting real time DA diagnostic plots and statistics
 '''
 
 from diags import Conventional
-import numpy as np
-import pandas as pd
 from filter_df import filter_df
 from make_da_plots import make_base_plots, make_wind_base_plots
 from datetime import datetime
+import argparse
 
-def da_base_plots(path, model, date_time, variable, **kwargs):
+def da_base_plots(path, model, date_time, var, **kwargs):
     
     '''
     Required parameters:
@@ -57,8 +56,11 @@ def da_base_plots(path, model, date_time, variable, **kwargs):
         date_time = date_time.strftime('%Y%m%d%H') 
         
     # Get file paths, read, and filter data
-    anl_fp = f'diag_conv_{var}_anl.{date_time}.nc4.gz'
-    ges_fp = f'diag_conv_{var}_ges.{date_time}.nc4.gz'
+    # anl_fp = f'{path}/diag_conv_{var}_anl.{date_time}.nc4.gz'
+    # ges_fp = f'{path}/diag_conv_{var}_ges.{date_time}.nc4.gz'
+    # for non zipped files, idk what to use atm
+    anl_fp = f'{path}/diag_conv_{var}_anl.{date_time}.nc4'
+    ges_fp = f'{path}/diag_conv_{var}_ges.{date_time}.nc4'
     
     anl_diag = Conventional(anl_fp)
     ges_diag = Conventional(ges_fp)
@@ -66,9 +68,56 @@ def da_base_plots(path, model, date_time, variable, **kwargs):
     anl_df = anl_diag.get_data()
     ges_df = ges_diag.get_data()
     
-    fil_dfs = filter_df([anl_df, ges_df], kwargs)
+    fil_dfs = filter_df([anl_df, ges_df], station_ids=station_ids, obs_types=obs_types, use=use, hem=hem, p_range=p_range,
+                        elv_range=elv_range, lat_range=lat_range, lon_range=lon_range, err_range=err_range)
     
     if(var == 'uv'):
-        make_wind_base_plots(fil_dfs, ges_diag.metadata)
+        # make_wind_base_plots(fil_dfs, ges_diag.metadata, save_plots=True)
+        make_wind_base_plots(fil_dfs, ges_diag.metadata, save_plots=True) #for testing purposes
     else:
-        make_base_plots(fil_dfs, ges_diag.metadata)
+        # make_base_plots(fil_dfs, ges_diag.metadata, save_plots=True)
+        make_base_plots(fil_dfs, ges_diag.metadata, save_plots=True)
+        
+def main():
+    parser = argparse.ArgumentParser(description="Run DA base plots.")
+
+    # Required arguments
+    parser.add_argument('path', type=str, help="Path to the base directory containing the day directories.")
+    parser.add_argument('model', type=str, choices=['rtma', 'rrfs'], help="Model to use ('rtma' or 'rrfs').")
+    parser.add_argument('date_time', type=str, help="Datetime of DA run in '%Y%m%d%H' format.")
+    parser.add_argument('var', type=str, help="Variable to plot, options: (ps, q, t, uv, rw, pw, sst).")
+
+    # Optional arguments
+    parser.add_argument('--station_ids', nargs='+', help="Station ID(s) to filter by.")
+    parser.add_argument('--obs_types', nargs='+', type=int, help="Observation types to filter by.")
+    parser.add_argument('--use', type=int, help="Use flag for observation (1=assimilated, 0=not).")
+    parser.add_argument('--hem', type=str, help="Predetermined geographic extent (GLOBAL, NH, TR, SH, CONUS).")
+    parser.add_argument('--p_range', nargs=2, type=float, help="Pressure range (min max) for including observation in df.")
+    parser.add_argument('--elv_range', nargs=2, type=float, help="Elevation range (min max) for including observation in df.")
+    parser.add_argument('--lat_range', nargs=2, type=float, help="Latitude range (min max) for including observation in df.")
+    parser.add_argument('--lon_range', nargs=2, type=float, help="Longitude range (min max) for including observation in df.")
+    parser.add_argument('--err_range', nargs=2, type=float, help="Error range (min max) for including observation in df.")
+
+    args = parser.parse_args()
+
+    # Prepare kwargs dictionary
+    kwargs = {
+        'station_ids': args.station_ids,
+        'obs_types': args.obs_types,
+        'use': args.use,
+        'hem': args.hem,
+        'p_range': tuple(args.p_range) if args.p_range else None,
+        'elv_range': tuple(args.elv_range) if args.elv_range else None,
+        'lat_range': tuple(args.lat_range) if args.lat_range else None,
+        'lon_range': tuple(args.lon_range) if args.lon_range else None,
+        'err_range': tuple(args.err_range) if args.err_range else None
+    }
+
+    # Remove None values from kwargs
+    kwargs = {k: v for k, v in kwargs.items() if v is not None}
+
+    # Call the function with parsed arguments
+    da_base_plots(args.path, args.model, args.date_time, args.var, **kwargs)
+
+if __name__ == "__main__":
+    main()

@@ -134,12 +134,8 @@ def filter_df(dfs, **kwargs):
             mask = np.logical_and(mask, np.logical_and(errorinv >= error_min_inv,
                                                        errorinv <= error_max_inv))
 
-        if(all(mask)):
-    #         print("No obs removed from filtering")
-            return df
-
-        #filter dataframe, keeping only desired obs
-        df.drop(df[~mask].index, inplace = True)
+        if(not all(mask)):  
+            df.drop(df[~mask].index, inplace = True)
         
         fil_dfs.append(df)
 

@@ -58,7 +58,10 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
     df_ges = dfs[0]
     df_anl = dfs[1]
         
-    print(f'------------ {var_name} Data Assimilation Statistics and Plots ------------\n\n')
+    if(not save_plots):
+        print(f'------------ {var_name} Data Assimilation Statistics and Plots ------------\n\n')
+    else:
+        print('Creating plots...')
         
     #* Create the bar plot by obs type showing proportional assimilated and total assimilated
     if(len(df_anl['observation_type'].unique()) > 1):
@@ -80,11 +83,14 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
     datasets = [(obs, 'Obs'),
                 (omf, 'OmF'),
                 (oma, 'OmA')]
+    
+    statistics = []
 
     for ax, (data, label) in zip(axes, datasets):
         # Get basic statistics
         n, mean, std, mx, mn = len(data), np.mean(data), np.std(data), np.max(data), np.min(data)
-        print(f'{label} Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
+        statistics.append([label, n, mean, std, mx, mn])
+        # print(f'{label} Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
         
         # Make proper bin sizes using the equation max-min/sqrt(n). Then
         # extend the bin range to 4x the standard deviation
@@ -100,8 +106,30 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
     # Add some more space between subplots
     plt.subplots_adjust(wspace=0.3)
     
+    # save or show plots
     if(save_plots):
         plt.savefig(f'{dir_name}/{var_name}_histograms', bbox_inches='tight')
+        plt.close(fig)
+    else:
+        plt.show()
+        
+    # Create DataFrame for statistics
+    stats_df = pd.DataFrame(statistics, columns=['Label', 'n', 'Mean', 'Std', 'Max', 'Min'])
+    
+    # Create a figure for statistics figure
+    fig, ax = plt.subplots(figsize = (8,1))
+
+    # Hide the axes
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+    ax.set_frame_on(False)
+
+    # Create the table
+    ax.table(cellText=stats_df.values, colLabels=stats_df.columns, cellLoc='center', loc='center')
+
+    # save or show plots
+    if(save_plots):
+        plt.savefig(f'{dir_name}/{var_name}_statistics', bbox_inches='tight')
         plt.close(fig)
     else:
         plt.show()
@@ -141,7 +169,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
         ax.set_title(f'{var_name} Obs', fontsize=14)
         plt.tight_layout()
         if(save_plots):
-            plt.savefig(f'{dir_name}/{var_name}_obs_map')
+            plt.savefig(f'{dir_name}/{var_name}_obs_map', bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
@@ -167,7 +195,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
 #                          edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
         # Plot the omf/oma data with two sqaures next to each other (Option 2)
         lat_range = latlons_ges[0].max() - latlons_ges[0].min()
-        offset_ratio = 145
+        offset_ratio = 175
         offset = lat_range / offset_ratio
         cs1 = ax.scatter(latlons_anl[1], latlons_anl[0]+offset, c=oma, s=30, cmap='PRGn', marker='s', 
                          edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
@@ -193,7 +221,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
         plt.tight_layout()
         
         if(save_plots):
-            plt.savefig(f'{dir_name}/omf_oma_map')
+            plt.savefig(f'{dir_name}/omf_oma_map', bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
@@ -235,10 +263,13 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
         plt.tight_layout()
         
         if(save_plots):
-            plt.savefig(f'{dir_name}/{var_name}_obs_omf_oma_maps')
+            plt.savefig(f'{dir_name}/{var_name}_obs_omf_oma_maps', bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
+            
+    if(save_plots):
+        print('Plots created succesfully')
         
         
 def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
@@ -354,10 +385,6 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         if area_size < 50:
             ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
         
-        # Calculate dynamic scale based on the plot dimensions and reference arrow length
-        x_range = latlons[1].max() - latlons[1].min()
-        y_range = latlons[0].max() - latlons[0].min()
-        
         # Normalize magnitude so the arrows are all the same size
         u_norm = u / np.abs(mag)
         v_norm = v / np.abs(mag)
@@ -379,7 +406,7 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         
         # Display or save the plot
         if(save_plots):
-            plt.savefig(f'{dir_name}/wind_speed_direction_{title}_map')
+            plt.savefig(f'{dir_name}/wind_speed_direction_{title}_map', bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
@@ -423,6 +450,6 @@ def assimilated_by_obs_plots(df_anl, dir_name):
     if dir_name is None:
         plt.show()
     else:
-        plt.savefig(f'{dir_name}/assimilated_obs_plots')
+        plt.savefig(f'{dir_name}/assimilated_obs_plots', bbox_inches='tight')
         plt.close(fig)
         

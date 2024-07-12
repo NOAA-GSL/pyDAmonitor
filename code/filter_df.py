@@ -35,7 +35,8 @@ def filter_df(dfs, **kwargs):
         inPlace    : (bool) True to filter current df, False to return reference to a new filtered df
 
     Returns:
-        Returns new dfs is in_place is false and edits passed dfs is in_place is true 
+        Returns new dfs if in_place is false and edits passed dfs is in_place is true, returns a list in the same order they were passed
+        
     """
     
     # Default values for parameters

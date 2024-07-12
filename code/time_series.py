@@ -144,7 +144,7 @@ def get_omfs(fps, station_ids=None, obs_types=None):
         try:
             #Open file and filter dataframe
             df = Conventional(fp).get_data() 
-            omf_values = filter_df([df], station_ids=station_ids, obs_types=obs_types)['omf_adjusted']
+            omf_values = filter_df([df], station_ids=station_ids, obs_types=obs_types)[0]['omf_adjusted']
             
             if(len(omf_values)==0):
                 print('Filter combination yields no results')

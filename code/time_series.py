@@ -12,16 +12,16 @@ from filter_df import filter_df
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-def plot_time_series(path, var, anl_ges, s_time, f_time, station_ids=None, obs_types=None):
+def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=None, obs_types=None):
     '''
     Get filepaths for RTMA CONUS GSI diag files
     
     Parameters:
     
-    path       : (str) path to directory containing multiple day directories
+    paths      : (str list) path to directory containing multiple day directories for each model
+    models     : (str list) which models, current options ('rtma_conus', 'rrfs') - Order should match paths
     var        : (str) variable of interest
     anl_ges    : (str) 'anl', 'ges', or 'both if you want to plot analysis or guess
-    model      : (str) which model, 'rtma' or 'rrfs' (NOT IMPLEMENTED YET)
     s_time     : (datetime or str) start date and hour for time series in %Y%m%d%H format
     f_time     : (datetime or str) final date and hour for time series in %Y%m%d%H format
     station_ids: (array str) station_id or ids to filter by
@@ -29,6 +29,9 @@ def plot_time_series(path, var, anl_ges, s_time, f_time, station_ids=None, obs_t
                   https://emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_2.htm
                  
     '''
+    
+    model_options = ['rtma_conus', 'rrfs']
+    
     # Check correct argument passed
     if anl_ges not in {'anl', 'ges', 'both'}:
         raise ValueError(f"'{anl_ges}' is not an allowed option, must be 'anl', 'ges', or 'both' ")
@@ -43,21 +46,35 @@ def plot_time_series(path, var, anl_ges, s_time, f_time, station_ids=None, obs_t
     
     series = {}
     
-    # Check need omf/oma time series data
-    if anl_ges == 'both' or anl_ges == 'ges':
-        ges_fps = get_gsi_fps(path, var, 'ges', date_times)
-        ges_omfs = get_omfs(ges_fps, station_ids=station_ids, obs_types=obs_types)
-        series['ges'] = ges_omfs
-       
-    if anl_ges == 'both' or anl_ges == 'anl':
-        anl_fps = get_gsi_fps(path, var, 'anl', date_times)
-        anl_omfs = get_omfs(anl_fps, station_ids=station_ids, obs_types=obs_types)
-        series['anl'] = anl_omfs
-       
+    for path, model in zip(paths, models):
+        
+        #Make sure model is allowed
+        if model not in model_options:
+            raise ValueError(f"{model} is not an allowed option, must be one or more of {model_options}")
+            
+        print(f"Reading {model} data...")
+            
+        # Check need omf/oma time series data
+        if anl_ges == 'both' or anl_ges == 'ges':
+            ges_fps = get_gsi_fps(path, model, var, 'ges', date_times)
+            ges_omfs = get_omfs(ges_fps, station_ids=station_ids, obs_types=obs_types)
+            #Check if all values are nan
+            if(np.all(np.isnan(ges_omfs))): 
+                raise ValeError(f"All times for {model} ges are NaN")
+            series[f'{model}_ges'] = ges_omfs
+
+        if anl_ges == 'both' or anl_ges == 'anl':
+            anl_fps = get_gsi_fps(path, model, var, 'anl', date_times)
+            anl_omfs = get_omfs(anl_fps, station_ids=station_ids, obs_types=obs_types)
+            if(np.all(np.isnan(anl_omfs))): 
+                raise ValeError(f"All times for {model} anl are NaN")
+            series[f'{model}_anl'] = anl_omfs
+            
+    print("Making plot..")   
     make_plot(series, date_times, var)
     
 
-def get_gsi_fps(path, var, anl_ges, date_times):
+def get_gsi_fps(path, model, var, anl_ges, date_times):
 
     '''
     Get filepaths for RTMA CONUS GSI diag files
@@ -65,9 +82,10 @@ def get_gsi_fps(path, var, anl_ges, date_times):
     Parameters:
     
     path       : (str) path to directory containing multiple 
+    model      : (str) which model, current options ('rtma', 'rrfs')
     var        : (str) variable of interest
     anl_ges    : (str) 'anl' or 'ges' if you want to plot analysis or guess
-    model      : (str) which model, 'rtma' or 'rrfs' (NOT IMPLEMENTED YET_)
+    model      : (str) which model, 'rtma_conus' or 'rrfs' (NOT IMPLEMENTED YET_)
     multiday   : (bool) False if path points to folder containing folder 00-23 or True if
                  if points to folder containing folders of different days each day with folders
                  00-23
@@ -76,6 +94,8 @@ def get_gsi_fps(path, var, anl_ges, date_times):
     
     fps   : (str array) array of strings with filepaths to diag files, chronological
     '''
+    if(model=='rtma_conus'):
+        model = model.upper()
        
      # Convert DatetimeIndex to array of strings in a specific format
     date_strs = date_times.strftime('%Y%m%d%H').to_numpy()
@@ -84,7 +104,7 @@ def get_gsi_fps(path, var, anl_ges, date_times):
     hour_strs = np.array([s[-2:] for s in date_strs])
        
     fps = np.array(
-        [f'{path}/RTMA_CONUS.{day_str}/{hour_str}/diag_conv_{var}_{anl_ges}.{day_str}{hour_str}.nc4.gz'
+        [f'{path}/{model}.{day_str}/{hour_str}/diag_conv_{var}_{anl_ges}.{day_str}{hour_str}.nc4.gz'
         for day_str, hour_str in zip(day_strs, hour_strs)]
     )
     
@@ -197,13 +217,13 @@ def make_plot(series, times, var):
         
         # Highlight NaN points
         nan_indices = np.isnan(data)
-        plt.scatter(times[nan_indices], np.zeros(sum(nan_indices)), color='red', 
-                    label='No Data')
+        plt.scatter(times[nan_indices], np.zeros(sum(nan_indices)), color='red')
+        #ToDo, add NaN label on legend but only once
         
         max_val = max((np.nanmax(np.abs(data)) * 1.1), max_val)
         
     # Plot a horizontal line at zero
-    plt.axhline(y=0, color='r', linestyle='--', label='Zero')
+    plt.axhline(y=0, color='r', linestyle='--')
 
     # Set y-axis limits to have zero line in the middle
     plt.ylim(-max_val, max_val)

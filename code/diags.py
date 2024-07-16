@@ -52,6 +52,15 @@ class GSIdiag:
 
     # def __len__(self):
     #     return self.data_df.shape[0]
+    
+class JEDIdiag:
+    
+    def __init__(self, path):
+        """
+        Initialize a JEDI HofX diagnostic object
+        INPUT:
+            path : path to JEDI hofx file
+        """
 
 
 class Conventional(GSIdiag):

@@ -1,9 +1,9 @@
 # configuration for DA monitoring
-path: /Users/aidenpape/Desktop/noaa/code/pyDAmonitor/example_data # aidens laptop
-# path: /lfs5/BMC/wrfruc/aiden.pape/pyDAmonitor/example_data # jet
+# path: /Users/aidenpape/Desktop/noaa/code/pyDAmonitor/example_data # aidens laptop
+path: /lfs5/BMC/wrfruc/aiden.pape/pyDAmonitor/example_data # jet
 model: rtma
 date_time: 2024031812
-var: uv
+var: t
 # station_ids: []
 # obs_types: []
 # use: 0

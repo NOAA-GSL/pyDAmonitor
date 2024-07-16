@@ -9,6 +9,7 @@ from filter_df import filter_df
 from make_da_plots import make_base_plots, make_wind_base_plots
 from datetime import datetime
 import argparse
+import yaml
 
 def da_base_plots(path, model, date_time, var, **kwargs):
     
@@ -59,6 +60,8 @@ def da_base_plots(path, model, date_time, var, **kwargs):
     # anl_fp = f'{path}/diag_conv_{var}_anl.{date_time}.nc4.gz'
     # ges_fp = f'{path}/diag_conv_{var}_ges.{date_time}.nc4.gz'
     # for non zipped files, idk what to use atm
+    
+    print("Reading and filtering data...")
     anl_fp = f'{path}/diag_conv_{var}_anl.{date_time}.nc4'
     ges_fp = f'{path}/diag_conv_{var}_ges.{date_time}.nc4'
     
@@ -71,6 +74,8 @@ def da_base_plots(path, model, date_time, var, **kwargs):
     fil_dfs = filter_df([anl_df, ges_df], station_ids=station_ids, obs_types=obs_types, use=use, hem=hem, p_range=p_range,
                         elv_range=elv_range, lat_range=lat_range, lon_range=lon_range, err_range=err_range)
     
+    print("Data read successfully\n")
+    
     if(var == 'uv'):
         # make_wind_base_plots(fil_dfs, ges_diag.metadata, save_plots=True)
         make_wind_base_plots(fil_dfs, ges_diag.metadata, save_plots=True) #for testing purposes
@@ -79,15 +84,16 @@ def da_base_plots(path, model, date_time, var, **kwargs):
         make_base_plots(fil_dfs, ges_diag.metadata, save_plots=True)
         
 def main():
+    
     parser = argparse.ArgumentParser(description="Run DA base plots.")
 
-    # Required arguments
-    parser.add_argument('path', type=str, help="Path to the base directory containing the day directories.")
-    parser.add_argument('model', type=str, choices=['rtma', 'rrfs'], help="Model to use ('rtma' or 'rrfs').")
-    parser.add_argument('date_time', type=str, help="Datetime of DA run in '%Y%m%d%H' format.")
-    parser.add_argument('var', type=str, help="Variable to plot, options: (ps, q, t, uv, rw, pw, sst).")
+    # Required arguments (for command line arguments, not actually required bc we can use config files)
+    parser.add_argument('--path', type=str, help="Path to the base directory containing the day directories.")
+    parser.add_argument('--model', type=str, choices=['rtma', 'rrfs'], help="Model to use ('rtma' or 'rrfs').")
+    parser.add_argument('--date_time', type=str, help="Datetime of DA run in '%Y%m%d%H' format.")
+    parser.add_argument('--var', type=str, help="Variable to plot, options: (ps, q, t, uv, rw, pw, sst).")
 
-    # Optional arguments
+    # Optional arguments (for command line arguments)
     parser.add_argument('--station_ids', nargs='+', help="Station ID(s) to filter by.")
     parser.add_argument('--obs_types', nargs='+', type=int, help="Observation types to filter by.")
     parser.add_argument('--use', type=int, help="Use flag for observation (1=assimilated, 0=not).")
@@ -97,27 +103,64 @@ def main():
     parser.add_argument('--lat_range', nargs=2, type=float, help="Latitude range (min max) for including observation in df.")
     parser.add_argument('--lon_range', nargs=2, type=float, help="Longitude range (min max) for including observation in df.")
     parser.add_argument('--err_range', nargs=2, type=float, help="Error range (min max) for including observation in df.")
+    parser.add_argument('--config_file', type=str, help="Path to the YAML configuration file.")
 
     args = parser.parse_args()
+    
+    #check if a config file was passed
+    if args.config_file:
+        
+        print("Arguments passed with configuration file")
+        
+        #Open config file
+        with open(args.config_file, 'r') as file:
+            config = yaml.safe_load(file)
+            
+        # get kwargs
+        kwargs = {
+            'station_ids': config.get('station_ids'),
+            'obs_types': config.get('obs_types'),
+            'use': config.get('use'),
+            'hem': config.get('hem'),
+            'p_range': tuple(config.get('p_range')) if config.get('p_range') else None,
+            'elv_range': tuple(config.get('elv_range')) if config.get('elv_range') else None,
+            'lat_range': tuple(config.get('lat_range')) if config.get('lat_range') else None,
+            'lon_range': tuple(config.get('lon_range')) if config.get('lon_range') else None,
+            'err_range': tuple(config.get('err_range')) if config.get('err_range') else None
+        }
+        
+        # remove none args 
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        
+        #debugging
+        # for key, value in config.items():
+        #     print(f"{key}: {value}")    
+        
+        #call function
+        da_base_plots(config['path'], config['model'], config['date_time'], config['var'], **kwargs)
+        
+    # no config file so we will use command like args
+    else:
+        
+        print("No configuration file passed, reading arguments from command line")
+        # get kwargs
+        kwargs = {
+            'station_ids': args.station_ids,
+            'obs_types': args.obs_types,
+            'use': args.use,
+            'hem': args.hem,
+            'p_range': tuple(args.p_range) if args.p_range else None,
+            'elv_range': tuple(args.elv_range) if args.elv_range else None,
+            'lat_range': tuple(args.lat_range) if args.lat_range else None,
+            'lon_range': tuple(args.lon_range) if args.lon_range else None,
+            'err_range': tuple(args.err_range) if args.err_range else None
+        }
 
-    # Prepare kwargs dictionary
-    kwargs = {
-        'station_ids': args.station_ids,
-        'obs_types': args.obs_types,
-        'use': args.use,
-        'hem': args.hem,
-        'p_range': tuple(args.p_range) if args.p_range else None,
-        'elv_range': tuple(args.elv_range) if args.elv_range else None,
-        'lat_range': tuple(args.lat_range) if args.lat_range else None,
-        'lon_range': tuple(args.lon_range) if args.lon_range else None,
-        'err_range': tuple(args.err_range) if args.err_range else None
-    }
+        # Remove None args
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
-    # Remove None values from kwargs
-    kwargs = {k: v for k, v in kwargs.items() if v is not None}
-
-    # Call the function with parsed arguments
-    da_base_plots(args.path, args.model, args.date_time, args.var, **kwargs)
+        # call function
+        da_base_plots(args.path, args.model, args.date_time, args.var, **kwargs)
 
 if __name__ == "__main__":
     main()

@@ -61,7 +61,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
     if(not save_plots):
         print(f'------------ {var_name} Data Assimilation Statistics and Plots ------------\n\n')
     else:
-        print('Creating plots...')
+        print(f'Creating {var_name} plots...')
         
     #* Create the bar plot by obs type showing proportional assimilated and total assimilated
     if(len(df_anl['observation_type'].unique()) > 1):
@@ -85,10 +85,18 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
                 (oma, 'OmA')]
     
     statistics = []
+    dp = 3 # number of decimal places for stats
 
     for ax, (data, label) in zip(axes, datasets):
+        #convert to float for decimal precision
+        data = np.array(data, dtype=float)
         # Get basic statistics
-        n, mean, std, mx, mn = len(data), np.mean(data), np.std(data), np.max(data), np.min(data)
+        n, mean, std, mx, mn = ( len(data), 
+                                np.round(np.mean(data), dp),
+                                np.round(np.std(data), dp),
+                                np.round(np.max(data), dp),
+                                np.round(np.min(data), dp)
+                                )
         statistics.append([label, n, mean, std, mx, mn])
         # print(f'{label} Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
         
@@ -114,10 +122,10 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
         plt.show()
         
     # Create DataFrame for statistics
-    stats_df = pd.DataFrame(statistics, columns=['Label', 'n', 'Mean', 'Std', 'Max', 'Min'])
+    stats_df = pd.DataFrame(statistics, columns=['Label', 'Count', 'Mean', 'Std Dev', 'Max', 'Min'])
     
     # Create a figure for statistics figure
-    fig, ax = plt.subplots(figsize = (8,1))
+    fig, ax = plt.subplots(figsize = (8,2))
 
     # Hide the axes
     ax.xaxis.set_visible(False)
@@ -255,7 +263,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
             gl.top_labels = False
             gl.right_labels = False
             # Add a colorbar
-            cb = plt.colorbar(cs, ax=ax, shrink=0.2, pad=.04, extend='both')
+            cb = plt.colorbar(cs, ax=ax, shrink=0.8, pad=.04, extend='both')
             cb.set_label(var_units)
             # Set title
             ax.set_title(f'{var_name} {label} Map', fontsize=14)
@@ -269,7 +277,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
             plt.show()
             
     if(save_plots):
-        print('Plots created succesfully')
+        print(f'Plots created successfully, saved to in {dir_name} folder')
         
         
 def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
@@ -291,7 +299,10 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
     df_ges = dfs[0]
     df_anl = dfs[1]
     
-    print('------------ Wind Data Assimilation Statistics and Plots ------------\n\n')
+    if(not save_plots):
+        print('------------ Wind Data Assimilation Statistics and Plots ------------\n\n')
+    else:
+        print('Creating wind plots...')
     
     # Get data arrays
     u_obs = df_ges['u_observation']
@@ -331,12 +342,23 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
                  (mag_obs, 'Wind Speed Obs'),
                  (mag_omf, 'Wind Speed OmF'),
                  (mag_oma, 'Wind Speed OmA')]
+    
+    statistics = []
+    dp = 3 # number of decimal places for stats
 
     axes = axes.flatten()
     for ax, (data, label) in zip(axes, datasets):
+        #convert to float for decimal precision
+        data = np.array(data, dtype=float)
         # Get basic statistics
-        n, mean, std, mx, mn = len(data), np.mean(data), np.std(data), np.max(data), np.min(data)
-        print(f'{label} Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
+        n, mean, std, mx, mn = ( len(data), 
+                                np.round(np.mean(data), dp), 
+                                np.round(np.std(data), dp),
+                                np.round(np.max(data), dp), 
+                                np.round(np.min(data), dp) 
+                                )
+        statistics.append([label, n, mean, std, mx, mn])
+        # print(f'{label} Statistics: \nn: {n}, mean: {mean}, std: {std}, max: {mx}, min: {mn}\n')
         
         # Make proper bin sizes using the equation max-min/sqrt(n). Then
         # extend the bin range to 4x the standard deviation
@@ -354,6 +376,27 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
     
     if(save_plots):
         plt.savefig(f'{dir_name}/wind_histograms', bbox_inches='tight')
+        plt.close(fig)
+    else:
+        plt.show()
+        
+    # Create DataFrame for statistics
+    stats_df = pd.DataFrame(statistics, columns=['Label', 'Count', 'Mean', 'Std Dev', 'Max', 'Min'])
+    
+    # Create a figure for statistics figure
+    fig, ax = plt.subplots(figsize = (8,2))
+
+    # Hide the axes
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+    ax.set_frame_on(False)
+
+    # Create the table
+    ax.table(cellText=stats_df.values, colLabels=stats_df.columns, cellLoc='center', loc='center')
+
+    # save or show plots
+    if(save_plots):
+        plt.savefig(f'{dir_name}/wind_statistics', bbox_inches='tight')
         plt.close(fig)
     else:
         plt.show()
@@ -411,6 +454,8 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         else:
             plt.show()
     
+    if(save_plots):
+        print(f'Plots created successfully, saved to in {dir_name} folder')
     
 def assimilated_by_obs_plots(df_anl, dir_name):
     
@@ -422,7 +467,7 @@ def assimilated_by_obs_plots(df_anl, dir_name):
     
     #calculated prop and totals
     prop_assim_by_obs_type_anl = pd.DataFrame(df_anl.groupby('observation_type')['analysis_use_flag'].mean())
-    total_assim_by_obs_type_anl = pd.DataFrame(df_anl.groupby('observation_type')['analysis_use_flag'].sum())
+    total_assim_by_obs_type_anl = pd.DataFrame(df_anl.groupby('observation_type')['analysis_use_flag'].count())
     
     fig, axes = plt.subplots(1, 2, figsize = (12, 4))
     

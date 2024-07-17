@@ -13,7 +13,7 @@ def filter_df(dfs, **kwargs):
 
     Values needed from df:
         station_ids: (array str) id of station observation was taken at
-        use_flag   : (array int) 1 f assimilated, 0 if not
+        use_flag   : (array int) 1 if assimilated, 0 if not
         obs_type   : (array int) bufr observation obs_types <Observation_Type>
         errorinv   : (array float) observation <Errinv_Final>
         lat        : (array float) observation <Latitude>

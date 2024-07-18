@@ -42,12 +42,6 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
     var_name = units_mapping.get(metadata['Variable'])[0]
     
     date = metadata['Date'].strftime('%Y%m%d%H')
-
-    # Perform conversions from K to F if the variable is temperature
-    if metadata['Variable'] == 't':
-        for df in dfs:
-            df['observation'] = (1.8 * (df['observation'] - 273.15)) + 32
-            df['omf_adjusted'] = 1.8 * df['omf_adjusted']
         
     #For saving plots if specified
     dir_name = None
@@ -75,6 +69,12 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
     obs = df_ges['observation']
     omf = df_ges['omf_adjusted']
     oma = df_anl['omf_adjusted']
+    
+    # Perform conversions from K to F if the variable is temperature
+    if metadata['Variable'] == 't':
+        obs = (1.8 * (obs - 273.15)) + 32
+        omf = 1.8 * omf
+        oma = 1.8 * oma
     
     # Create subplots
     fig, axes = plt.subplots(1, 3, figsize=(14, 3))
@@ -254,7 +254,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
             if(label == "Obs"):
                 norm=None
             else:
-                norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(data)*2), vcenter=0, vmax = 0 + (np.std(data)*2))
+                norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
             # Plot the scatter data with smaller and more transparent points
             cs = ax.scatter(coords[1], coords[0], c=data, s=20, cmap=color, alpha=0.7,
                             transform=ccrs.PlateCarree(), norm=norm)

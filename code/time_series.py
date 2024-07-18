@@ -60,14 +60,14 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=No
             ges_omfs = get_omfs(ges_fps, station_ids=station_ids, obs_types=obs_types)
             #Check if all values are nan
             if(np.all(np.isnan(ges_omfs))): 
-                raise ValeError(f"All times for {model} ges are NaN")
+                raise ValueError(f"All times for {model} ges are NaN")
             series[f'{model}_ges'] = ges_omfs
 
         if anl_ges == 'both' or anl_ges == 'anl':
             anl_fps = get_gsi_fps(path, model, var, 'anl', date_times)
             anl_omfs = get_omfs(anl_fps, station_ids=station_ids, obs_types=obs_types)
             if(np.all(np.isnan(anl_omfs))): 
-                raise ValeError(f"All times for {model} anl are NaN")
+                raise ValueError(f"All times for {model} anl are NaN")
             series[f'{model}_anl'] = anl_omfs
             
     print("Making plot..")   

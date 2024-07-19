@@ -14,27 +14,32 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from metpy.plots import USCOUNTIES
 
-def make_base_plots(dfs, metadata, save_plots=False, **args):
+def make_base_plots(dfs, metadata, save_plots=False, shared_norm = None, **args):
 
     '''
-    dfs.    : list of dataframes to make plots of, should be ordered as followes (ges, anl, anl2, etc)
+    dfs     : list of dataframes to make plots of, should be ordered as followes (ges, anl, anl2, etc)
               all dataframes should be returned by pyDAmonitor.diags.get_data() (at the moment, only 
               [ges, anl] supported
     metadata: metadata dict returned by Conventional.metadata from either ges or anl file
-    '''
+    save_plots: (bool) True to save plots as files instead of printing
+    shared_norm: omf/oma norm returned from other make_base_plots function if aligned scales is needed
     
-    # print(len(args))
+    return: to_share_norm, the norm used in these omf/oma plots to be passed to another make_base_plots 
+    '''
     
     # check if the dfs passed are contain wind, which would have speed and direction
     if(metadata['Variable'] == 'uv'):
         print("Error: Use wind_base_plots for wind datasets, not base_plots")
         return None
     
+    #Norm to pass to our make_base_plots to have consistent scaling
+    to_share_norm = None
+    
     # Variable name dict
     units_mapping = {
         't': ['Temperature', 'Degrees Fahrenheit'],
         'ps': ['Surface Pressure', 'Pascals'],
-        'q': ['Specfic Humidity', 'G Water Vapor per KG of Air']
+        'q': ['Specific Humidity', 'G Water Vapor per KG of Air']
     }
 
     # Initialize var_units based on metadata
@@ -46,7 +51,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
     #For saving plots if specified
     dir_name = None
     if(save_plots):
-        dir_name = metadata['Variable'] + "_" + date + "_plots"
+        dir_name = "plots/" + metadata['Variable'] + "_" + date + "_plots"
         os.makedirs(dir_name, exist_ok=True)
         
     df_ges = dfs[0]
@@ -192,7 +197,11 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
         ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
         # ax.set_extent([-180, 180, -90, 90])
         # Normalization for colorbar
-        norm = mcolors.TwoSlopeNorm(vmin = 0 - (2*np.std(omf)), vcenter=0, vmax = 0 + np.std(omf))
+        if shared_norm is not None:
+            norm = shared_norm
+        else:
+            norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
+            to_shore_norm = norm
         # # Plot the omf/oma data with two circle of different sizes (Option 1)
 #         cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=120, cmap='PRGn',
 #                          transform=ccrs.PlateCarree(),
@@ -254,7 +263,11 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
             if(label == "Obs"):
                 norm=None
             else:
-                norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
+                if shared_norm is not None:
+                    norm = shared_norm
+                else:
+                    norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
+                    to_share_norm = norm
             # Plot the scatter data with smaller and more transparent points
             cs = ax.scatter(coords[1], coords[0], c=data, s=20, cmap=color, alpha=0.7,
                             transform=ccrs.PlateCarree(), norm=norm)
@@ -278,6 +291,8 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
             
     if(save_plots):
         print(f'Plots created successfully, saved to in {dir_name} folder')
+        
+    return to_share_norm
         
         
 def make_wind_base_plots(dfs, metadata, save_plots=False, **args):

@@ -14,7 +14,7 @@ from filter_df import filter_df
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=None, obs_types=None, save_plot=False):
+def plot_time_series(paths, models, var, anl_ges, s_time, f_time, use=None, station_ids=None, obs_types=None, save_plot=False):
     '''
     Get filepaths for RTMA CONUS GSI diag files
     
@@ -47,7 +47,6 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=No
     date_times = pd.date_range(start=s_time, end=f_time, freq='H')
     
     series = {}
-    
     for path, model in zip(paths, models):
         
         #Make sure model is allowed
@@ -59,7 +58,7 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=No
         # Check need omf/oma time series data
         if anl_ges == 'both' or anl_ges == 'ges':
             ges_fps = get_gsi_fps(path, model, var, 'ges', date_times)
-            ges_omfs = get_omfs(ges_fps, var=var, station_ids=station_ids, obs_types=obs_types)
+            ges_omfs = get_omfs(ges_fps, var=var, use=use, station_ids=station_ids, obs_types=obs_types)
             #Check if all values are nan
             if(np.all(np.isnan(ges_omfs))): 
                 raise ValueError(f"All times for {model} ges are NaN")
@@ -67,7 +66,7 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=No
 
         if anl_ges == 'both' or anl_ges == 'anl':
             anl_fps = get_gsi_fps(path, model, var, 'anl', date_times)
-            anl_omfs = get_omfs(anl_fps, var=var, station_ids=station_ids, obs_types=obs_types)
+            anl_omfs = get_omfs(anl_fps, var=var, use=use, station_ids=station_ids, obs_types=obs_types)
             if(np.all(np.isnan(anl_omfs))): 
                 raise ValueError(f"All times for {model} anl are NaN")
             series[f'{model}_anl'] = anl_omfs
@@ -142,7 +141,7 @@ def get_gsi_fps(path, model, var, anl_ges, date_times):
         
     return fps
 
-def get_omfs(fps, var, station_ids=None, obs_types=None):
+def get_omfs(fps, var, use=None, station_ids=None, obs_types=None):
     
     '''
     Read each file and store omf/oma
@@ -167,7 +166,7 @@ def get_omfs(fps, var, station_ids=None, obs_types=None):
             #Open file and filter dataframe
             df = Conventional(fp).get_data()
             
-            omf_values = filter_df([df], station_ids=station_ids, obs_types=obs_types)[0]['omf_adjusted']
+            omf_values = filter_df([df], use=use, station_ids=station_ids, obs_types=obs_types)[0]['omf_adjusted']
             
             if(len(omf_values)==0):
                 print('Filter combination yields no results')
@@ -203,7 +202,7 @@ def make_plot(series, times, var, save_plot):
     units_mapping = {
         't': ['Temperature', 'Degrees Fahrenheit'],
         'ps': ['Surface Pressure', 'Pascals'],
-        'q': ['Specfic Humidity', 'G Water Vapor per KG of Air']
+        'q': ['Specific Humidity', 'G Water Vapor per KG of Air']
     }
     
     # Initialize var_units based on metadata
@@ -251,6 +250,7 @@ def make_plot(series, times, var, save_plot):
     plt.xticks(rotation=45)
 
     if(save_plot):
+        os.makedirs("plots", exist_ok=True)
         fig_name = f'{var}_{plt_name}_time_series'
         plt.savefig(fig_name, bbox_inches='tight')
         plt.close(fig)

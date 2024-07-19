@@ -91,17 +91,23 @@ def filter_df(dfs, **kwargs):
                 raise ValueError(msg)
 
         # Initialize mask
-        mask = [True] * len(obs_type)
+        mask = [True] * len(station_id)
 
         #filter for the desired station_ids
         if station_ids is not None:
-            for ids in station_ids:
-                mask = np.logical_and(mask, station_id == ids)  # loop over all station_ids provided
+            st_id_mask = [False] * len(station_ids)
+            for ids in station_ids: # loop over all station_ids provided
+                st_id_mask = np.logical_or(st_id_mask, station_id == id)
+            
+            mask = np.logical_and(mask, st_id_mask)  
 
         #filter for the desired obs types
         if obs_types is not None:
-            for t in obs_types:
-                mask = np.logical_and(mask, obs_type == t)  # loop over all obs_types provided
+            obs_type_mask = [False] * len(obs_type)
+            for type in obs_types: # loop over all obs_types provided
+                obs_type_mask = np.logical_or(obs_type_mask, obs_type == type)
+            
+            mask = np.logical_and(mask, obs_type_mask)
 
         # filter for desired use flag if provided
         if use is not None:

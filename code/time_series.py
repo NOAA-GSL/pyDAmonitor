@@ -2,6 +2,8 @@
 Author: Aiden Pape
 
 Read omf/oma data from multiple files to create time series plots
+
+Current not capable of plotting wind time series
 '''
 
 from diags import Conventional
@@ -12,7 +14,7 @@ from filter_df import filter_df
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=None, obs_types=None):
+def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=None, obs_types=None, save_plot=False):
     '''
     Get filepaths for RTMA CONUS GSI diag files
     
@@ -57,7 +59,7 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=No
         # Check need omf/oma time series data
         if anl_ges == 'both' or anl_ges == 'ges':
             ges_fps = get_gsi_fps(path, model, var, 'ges', date_times)
-            ges_omfs = get_omfs(ges_fps, station_ids=station_ids, obs_types=obs_types)
+            ges_omfs = get_omfs(ges_fps, var=var, station_ids=station_ids, obs_types=obs_types)
             #Check if all values are nan
             if(np.all(np.isnan(ges_omfs))): 
                 raise ValueError(f"All times for {model} ges are NaN")
@@ -65,13 +67,13 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, station_ids=No
 
         if anl_ges == 'both' or anl_ges == 'anl':
             anl_fps = get_gsi_fps(path, model, var, 'anl', date_times)
-            anl_omfs = get_omfs(anl_fps, station_ids=station_ids, obs_types=obs_types)
+            anl_omfs = get_omfs(anl_fps, var=var, station_ids=station_ids, obs_types=obs_types)
             if(np.all(np.isnan(anl_omfs))): 
                 raise ValueError(f"All times for {model} anl are NaN")
             series[f'{model}_anl'] = anl_omfs
             
     print("Making plot..")   
-    make_plot(series, date_times, var)
+    make_plot(series, date_times, var, save_plot)
     
 
 def get_gsi_fps(path, model, var, anl_ges, date_times):
@@ -140,7 +142,7 @@ def get_gsi_fps(path, model, var, anl_ges, date_times):
         
     return fps
 
-def get_omfs(fps, station_ids=None, obs_types=None):
+def get_omfs(fps, var, station_ids=None, obs_types=None):
     
     '''
     Read each file and store omf/oma
@@ -163,11 +165,16 @@ def get_omfs(fps, station_ids=None, obs_types=None):
     for i, fp in enumerate(fps):
         try:
             #Open file and filter dataframe
-            df = Conventional(fp).get_data() 
+            df = Conventional(fp).get_data()
+            
             omf_values = filter_df([df], station_ids=station_ids, obs_types=obs_types)[0]['omf_adjusted']
             
             if(len(omf_values)==0):
                 print('Filter combination yields no results')
+                
+            #Convert to fahrenheit
+            if(var=='t'):
+                omf_values = omf_values * 1.8
                 
             hourly_omf[i] = omf_values.mean()
             
@@ -180,7 +187,7 @@ def get_omfs(fps, station_ids=None, obs_types=None):
             
     return hourly_omf
 
-def make_plot(series, times, var):
+def make_plot(series, times, var, save_plot):
     
     '''
     Make time series plot of omf/oma, can plot both omf and oma of the same time and var
@@ -204,14 +211,20 @@ def make_plot(series, times, var):
     var_name = units_mapping.get(var)[0]
 
     # Create the plot
-    plt.figure(figsize=(10, 5))
+    fig = plt.figure(figsize=(10, 5))
     
     # Define a list of colors to cycle through
     colors = ['b', 'g', 'c', 'm', 'y', 'k']
     
     color_ind = 0
     max_val = 0
+    
+    plt_name = ""
+    
     for key, data in series.items():
+        
+        plt_name = plt_name + key
+        
         plt.plot(times, data, marker='o', linestyle='-', color=colors[color_ind], label=key)
         color_ind = (color_ind + 1) % len(colors)
         
@@ -237,4 +250,11 @@ def make_plot(series, times, var):
     # Rotate x-axis labels
     plt.xticks(rotation=45)
 
-    plt.show()
+    if(save_plot):
+        fig_name = f'{var}_{plt_name}_time_series'
+        plt.savefig(fig_name, bbox_inches='tight')
+        plt.close(fig)
+        print(f'Figure saved as: {fig_name}')
+    else:
+        plt.show()
+    

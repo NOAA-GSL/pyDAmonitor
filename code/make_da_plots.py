@@ -103,7 +103,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
         # Make proper bin sizes using the equation max-min/sqrt(n). Then
         # extend the bin range to 4x the standard deviation
         binsize = (mx - mn) / np.sqrt(n)
-        bins = np.arange(mean - (4 * std), mean + (4 * std), binsize)
+        bins = np.arange(mean - (3 * std), mean + (3 * std), binsize)
         # Plot histogram
         ax.hist(data, bins=bins)
         # Add labels
@@ -125,7 +125,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
     stats_df = pd.DataFrame(statistics, columns=['Label', 'Count', 'Mean', 'Std Dev', 'Max', 'Min'])
     
     # Create a figure for statistics figure
-    fig, ax = plt.subplots(figsize = (8,2))
+    fig, ax = plt.subplots(figsize = (12,2))
 
     # Hide the axes
     ax.xaxis.set_visible(False)
@@ -155,7 +155,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
         #create small scale spatial plots 
         
         #create obs spatial plot
-        fig, ax = plt.subplots(1, 1, figsize=(12,8),
+        fig, ax = plt.subplots(1, 1, figsize=(12,16),
                                subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         ax.add_feature(cfeature.COASTLINE)
@@ -183,7 +183,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
             plt.show()
         
         #create spatial plot with omf and oma
-        fig, ax = plt.subplots(1, 1, figsize=(12,8),
+        fig, ax = plt.subplots(1, 1, figsize=(12,16),
                                subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         ax.add_feature(cfeature.COASTLINE)
@@ -236,7 +236,7 @@ def make_base_plots(dfs, metadata, save_plots=False, **args):
         
     else:
         # Create large scale spatial subplots
-        fig, axes = plt.subplots(3, 1, figsize=(12,8), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
+        fig, axes = plt.subplots(3, 1, figsize=(12,16), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         datasets = [(obs, 'Obs', 'Reds', latlons_ges),
                     (omf, 'OmF', 'PRGn', latlons_ges),

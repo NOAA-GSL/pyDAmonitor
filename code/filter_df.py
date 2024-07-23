@@ -104,8 +104,8 @@ def filter_df(dfs, **kwargs):
         #filter for the desired obs types
         if obs_types is not None:
             obs_type_mask = [False] * len(obs_type)
-            for type in obs_types: # loop over all obs_types provided
-                obs_type_mask = np.logical_or(obs_type_mask, obs_type == type)
+            for types in obs_types: # loop over all obs_types provided
+                obs_type_mask = np.logical_or(obs_type_mask, obs_type == types)
             
             mask = np.logical_and(mask, obs_type_mask)
 

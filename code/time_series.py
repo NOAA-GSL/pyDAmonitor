@@ -14,7 +14,7 @@ from filter_df import filter_df
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-def plot_time_series(paths, models, var, anl_ges, s_time, f_time, use=None, station_ids=None, obs_types=None, save_plot=False):
+def plot_time_series(paths, models, var, anl_ges, s_time, f_time, use=None, lat_range=None, lon_range=None, station_ids=None, obs_types=None, save_plot=False):
     '''
     Get filepaths for RTMA CONUS GSI diag files
     
@@ -26,6 +26,9 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, use=None, stat
     anl_ges    : (str) 'anl', 'ges', or 'both if you want to plot analysis or guess
     s_time     : (datetime or str) start date and hour for time series in %Y%m%d%H format
     f_time     : (datetime or str) final date and hour for time series in %Y%m%d%H format
+    use        : (int)   use flag for observation 1=assimilated, 0=not
+    lat_range  : (float tuple) (min, max) latitude (deg N) for including observation in df
+    lon_range  : (float tuple) (min, max) latitude (deg E) for including observation in df
     station_ids: (array str) station_id or ids to filter by
     obs_types  : (array int) bufr ob obs_types to filter by, see link 
                   https://emc.ncep.noaa.gov/mmb/data_processing/prepbufr.doc/table_2.htm
@@ -58,7 +61,8 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, use=None, stat
         # Check need omf/oma time series data
         if anl_ges == 'both' or anl_ges == 'ges':
             ges_fps = get_gsi_fps(path, model, var, 'ges', date_times)
-            ges_omfs = get_omfs(ges_fps, var=var, use=use, station_ids=station_ids, obs_types=obs_types)
+            ges_omfs = get_omfs(ges_fps, var=var, use=use, lat_range=lat_range, lon_range=lon_range, 
+                                station_ids=station_ids, obs_types=obs_types)
             #Check if all values are nan
             if(np.all(np.isnan(ges_omfs))): 
                 raise ValueError(f"All times for {model} ges are NaN")
@@ -66,7 +70,8 @@ def plot_time_series(paths, models, var, anl_ges, s_time, f_time, use=None, stat
 
         if anl_ges == 'both' or anl_ges == 'anl':
             anl_fps = get_gsi_fps(path, model, var, 'anl', date_times)
-            anl_omfs = get_omfs(anl_fps, var=var, use=use, station_ids=station_ids, obs_types=obs_types)
+            anl_omfs = get_omfs(anl_fps, var=var, use=use, lat_range=lat_range, lon_range=lon_range, 
+                                station_ids=station_ids, obs_types=obs_types)
             if(np.all(np.isnan(anl_omfs))): 
                 raise ValueError(f"All times for {model} anl are NaN")
             series[f'{model}_anl'] = anl_omfs
@@ -141,7 +146,7 @@ def get_gsi_fps(path, model, var, anl_ges, date_times):
         
     return fps
 
-def get_omfs(fps, var, use=None, station_ids=None, obs_types=None):
+def get_omfs(fps, var, use=None, lat_range=None, lon_range=None, station_ids=None, obs_types=None):
     
     '''
     Read each file and store omf/oma
@@ -166,7 +171,8 @@ def get_omfs(fps, var, use=None, station_ids=None, obs_types=None):
             #Open file and filter dataframe
             df = Conventional(fp).get_data()
             
-            omf_values = filter_df([df], use=use, station_ids=station_ids, obs_types=obs_types)[0]['omf_adjusted']
+            omf_values = filter_df([df], use=use, lat_range=lat_range, lon_range=lon_range, 
+                                   station_ids=station_ids, obs_types=obs_types)[0]['omf_adjusted']
             
             if(len(omf_values)==0):
                 print('Filter combination yields no results')

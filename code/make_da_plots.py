@@ -14,15 +14,19 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from metpy.plots import USCOUNTIES
 
-def make_base_plots(dfs, metadata, save_plots=False, shared_norm = None, **args):
+def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = None, **args):
 
     '''
-    dfs     : list of dataframes to make plots of, should be ordered as followes (ges, anl, anl2, etc)
-              all dataframes should be returned by pyDAmonitor.diags.get_data() (at the moment, only 
-              [ges, anl] supported
-    metadata: metadata dict returned by Conventional.metadata from either ges or anl file
-    save_plots: (bool) True to save plots as files instead of printing
+    dfs        : list of dataframes to make plots of, should be ordered as followes (ges, anl, anl2, etc)
+                 all dataframes should be returned by pyDAmonitor.diags.get_data() (at the moment, only 
+                 [ges, anl] supported
+    metadata   : metadata dict returned by Conventional.metadata from either ges or anl file
+    zoom       : (bool) True to plot oma/omf on the same plot on more zoomed in geo extents
+    save_plots : (bool) True to save plots as files instead of printing
     shared_norm: omf/oma norm returned from other make_base_plots function if aligned scales is needed
+    
+    Additional Args:
+    All keyword arguments to filter can be passed to make_base_plots to filter data before creating plots
     
     return: to_share_norm, the norm used in these omf/oma plots to be passed to another make_base_plots 
     '''
@@ -156,11 +160,11 @@ def make_base_plots(dfs, metadata, save_plots=False, shared_norm = None, **args)
     
     area_size = (latlons_ges[0].max()-latlons_ges[0].min())*(latlons_ges[1].max()-latlons_ges[1].min())
     
-    if(area_size<50): #(50 is arbitrary, meant to signify "zoomed in")
+    if area_size<50 and zoom: #(50 is arbitrary, meant to signify "zoomed in")
         #create small scale spatial plots 
         
         #create obs spatial plot
-        fig, ax = plt.subplots(1, 1, figsize=(12,16),
+        fig, ax = plt.subplots(1, 1, figsize=(18,16),
                                subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         ax.add_feature(cfeature.COASTLINE)
@@ -169,7 +173,7 @@ def make_base_plots(dfs, metadata, save_plots=False, shared_norm = None, **args)
         ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
         # ax.set_extent([-180, 180, -90, 90])
         # Plot the scatter data with smaller and more transparent points
-        cs = ax.scatter(latlons_ges[1], latlons_ges[0], c=obs, s=20, cmap='Reds', alpha=0.7,
+        cs = ax.scatter(latlons_ges[1], latlons_ges[0], c=obs, s=30, cmap='Reds', alpha=0.7,
                         transform=ccrs.PlateCarree())
         # Add gridlines for latitude and longitude
         gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
@@ -188,7 +192,7 @@ def make_base_plots(dfs, metadata, save_plots=False, shared_norm = None, **args)
             plt.show()
         
         #create spatial plot with omf and oma
-        fig, ax = plt.subplots(1, 1, figsize=(12,16),
+        fig, ax = plt.subplots(1, 1, figsize=(18,16),
                                subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         ax.add_feature(cfeature.COASTLINE)
@@ -203,23 +207,23 @@ def make_base_plots(dfs, metadata, save_plots=False, shared_norm = None, **args)
             norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
             to_shore_norm = norm
         # # Plot the omf/oma data with two circle of different sizes (Option 1)
-#         cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=120, cmap='PRGn',
-#                          transform=ccrs.PlateCarree(),
-#                          edgecolors='black', linewidths=0.2, label='OmF', norm=norm)
+        cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=200, cmap='PRGn',
+                         transform=ccrs.PlateCarree(),
+                         edgecolors='black', linewidths=0.2, label='OmF', norm=norm)
         
-#         cs2 = ax.scatter(latlons_anl[1], latlons_anl[0], c=oma, s=35, cmap='PRGn',
-#                          transform=ccrs.PlateCarree(),
-#                          edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
+        cs2 = ax.scatter(latlons_anl[1], latlons_anl[0], c=oma, s=50, cmap='PRGn',
+                         transform=ccrs.PlateCarree(),
+                         edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
         # Plot the omf/oma data with two sqaures next to each other (Option 2)
-        lat_range = latlons_ges[0].max() - latlons_ges[0].min()
-        offset_ratio = 175
-        offset = lat_range / offset_ratio
-        cs1 = ax.scatter(latlons_anl[1], latlons_anl[0]+offset, c=oma, s=30, cmap='PRGn', marker='s', 
-                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
-                         label='Top - OmA', norm=norm)
-        cs2 = ax.scatter(latlons_ges[1], latlons_ges[0]-offset, c=omf, s=30, cmap='PRGn', marker='s', 
-                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
-                         label='Bottom - OmF', norm=norm)
+#         lat_range = latlons_ges[0].max() - latlons_ges[0].min()
+#         offset_ratio = 175
+#         offset = lat_range / offset_ratio
+#         cs1 = ax.scatter(latlons_anl[1], latlons_anl[0]+offset, c=oma, s=50, cmap='PRGn', marker='s', 
+#                          edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
+#                          label='Top - OmA', norm=norm)
+#         cs2 = ax.scatter(latlons_ges[1], latlons_ges[0]-offset, c=omf, s=50, cmap='PRGn', marker='s', 
+#                          edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
+#                          label='Bottom - OmF', norm=norm)
         # Plot (OmA - OmF) FmA (Option 3)
 #         fma = oma - omf
 #         cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=fma, s=(np.abs(fma))*15, cmap='PRGn', 
@@ -245,7 +249,7 @@ def make_base_plots(dfs, metadata, save_plots=False, shared_norm = None, **args)
         
     else:
         # Create large scale spatial subplots
-        fig, axes = plt.subplots(3, 1, figsize=(12,16), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
+        fig, axes = plt.subplots(3, 1, figsize=(18,16), subplot_kw={'projection': ccrs.PlateCarree(central_longitude=260)})
         
         datasets = [(obs, 'Obs', 'Reds', latlons_ges),
                     (omf, 'OmF', 'PRGn', latlons_ges),
@@ -399,7 +403,7 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
     stats_df = pd.DataFrame(statistics, columns=['Label', 'Count', 'Mean', 'Std Dev', 'Max', 'Min'])
     
     # Create a figure for statistics figure
-    fig, ax = plt.subplots(figsize = (8,2))
+    fig, ax = plt.subplots(figsize = (10,2))
 
     # Hide the axes
     ax.xaxis.set_visible(False)
@@ -433,7 +437,7 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         # Get size of geographic extent
         area_size = (latlons[0].max() - latlons[0].min()) * (latlons[1].max() - latlons[1].min())
         
-        fig = plt.figure(figsize=(15, 10))
+        fig = plt.figure(figsize=(18, 10))
         
         # Add maps features
         ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=260))

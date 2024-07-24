@@ -205,25 +205,25 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
             norm = shared_norm
         else:
             norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
-            to_shore_norm = norm
+            to_share_norm = norm
         # # Plot the omf/oma data with two circle of different sizes (Option 1)
-        cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=200, cmap='PRGn',
-                         transform=ccrs.PlateCarree(),
-                         edgecolors='black', linewidths=0.2, label='OmF', norm=norm)
+#         cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=omf, s=200, cmap='PRGn',
+#                          transform=ccrs.PlateCarree(),
+#                          edgecolors='black', linewidths=0.2, label='OmF', norm=norm)
         
-        cs2 = ax.scatter(latlons_anl[1], latlons_anl[0], c=oma, s=50, cmap='PRGn',
-                         transform=ccrs.PlateCarree(),
-                         edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
+#         cs2 = ax.scatter(latlons_anl[1], latlons_anl[0], c=oma, s=50, cmap='PRGn',
+#                          transform=ccrs.PlateCarree(),
+#                          edgecolors='black', linewidths=0.2, label='OmA', norm=norm)
         # Plot the omf/oma data with two sqaures next to each other (Option 2)
-#         lat_range = latlons_ges[0].max() - latlons_ges[0].min()
-#         offset_ratio = 175
-#         offset = lat_range / offset_ratio
-#         cs1 = ax.scatter(latlons_anl[1], latlons_anl[0]+offset, c=oma, s=50, cmap='PRGn', marker='s', 
-#                          edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
-#                          label='Top - OmA', norm=norm)
-#         cs2 = ax.scatter(latlons_ges[1], latlons_ges[0]-offset, c=omf, s=50, cmap='PRGn', marker='s', 
-#                          edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
-#                          label='Bottom - OmF', norm=norm)
+        lat_range = latlons_ges[0].max() - latlons_ges[0].min()
+        offset_ratio = 175
+        offset = lat_range / offset_ratio
+        cs1 = ax.scatter(latlons_anl[1], latlons_anl[0]+offset, c=oma, s=50, cmap='PRGn', marker='s', 
+                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
+                         label='Top - OmA', norm=norm)
+        cs2 = ax.scatter(latlons_ges[1], latlons_ges[0]-offset, c=omf, s=50, cmap='PRGn', marker='s', 
+                         edgecolors='black', linewidths=0.7, transform=ccrs.PlateCarree(),
+                         label='Bottom - OmF', norm=norm)
         # Plot (OmA - OmF) FmA (Option 3)
 #         fma = oma - omf
 #         cs1 = ax.scatter(latlons_ges[1], latlons_ges[0], c=fma, s=(np.abs(fma))*15, cmap='PRGn', 
@@ -262,6 +262,8 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
             ax.add_feature(cfeature.COASTLINE)
             ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='black')
             ax.add_feature(cfeature.STATES, edgecolor='black')
+            if(area_size < 50):
+                ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
             # ax.set_extent([-180, 180, -90, 90])
             # Normalization for diverging cmaps, none for increasing cmaps for obs map
             if(label == "Obs"):
@@ -273,8 +275,8 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
                     norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
                     to_share_norm = norm
             # Plot the scatter data with smaller and more transparent points
-            cs = ax.scatter(coords[1], coords[0], c=data, s=20, cmap=color, alpha=0.7,
-                            transform=ccrs.PlateCarree(), norm=norm)
+            cs = ax.scatter(coords[1], coords[0], c=data, s=20, cmap=color, alpha=0.7, edgecolors='black',
+                            linewidths=0.5, transform=ccrs.PlateCarree(), norm=norm)
             # Add gridlines for latitude and longitude
             gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)
             gl.top_labels = False

@@ -52,15 +52,6 @@ class GSIdiag:
 
     # def __len__(self):
     #     return self.data_df.shape[0]
-    
-class JEDIdiag:
-    
-    def __init__(self, path):
-        """
-        Initialize a JEDI HofX diagnostic object
-        INPUT:
-            path : path to JEDI hofx file
-        """
 
 
 class Conventional(GSIdiag):
@@ -92,7 +83,7 @@ class Conventional(GSIdiag):
         initialization into a multidimensional pandas dataframe.
         """
         
-        #Added by Aiden, capability to read gzipped netCDF files
+        #Added capability to read gzipped netCDF files
         df_dict = {}
         f = None
         
@@ -217,38 +208,22 @@ class Conventional(GSIdiag):
         self.metadata['Subtype'] = subtype
         self.metadata['Station ID'] = station_id
         self.metadata['Anl Use'] = analysis_use
-        self.metadata['Levels'] = lvls
-        self.metadata['Levels Type'] = lvl_type
 
-        # Selects proper levels
-        if lvls is not None:
-            # Check if level type is valid
-            if lvl_type not in _VALID_LVL_TYPES:
-                raise ValueError((f'{lvl_type} is not a valid lvl_type. '
-                                  'Valid choices are: '
-                                  f'{" | ".join(_VALID_LVL_TYPES)}'))
+        if analysis_use:
+            assimilated_df, rejected_df, monitored_df = self._select_conv(
+                obsid, subtype, station_id, analysis_use)
 
-            binned_dfs = self._get_lvl_data(obsid, subtype, station_id,
-                                            analysis_use, lvls, lvl_type)
-
-            return binned_dfs
+            indexed_df = {
+                'assimilated': assimilated_df,
+                'rejected': rejected_df,
+                'monitored': monitored_df
+            }
 
         else:
-            if analysis_use:
-                assimilated_df, rejected_df, monitored_df = self._select_conv(
-                    obsid, subtype, station_id, analysis_use)
+            indexed_df = self._select_conv(obsid, subtype, station_id,
+                                           analysis_use)
 
-                indexed_df = {
-                    'assimilated': assimilated_df,
-                    'rejected': rejected_df,
-                    'monitored': monitored_df
-                }
-
-            else:
-                indexed_df = self._select_conv(obsid, subtype, station_id,
-                                               analysis_use)
-
-            return indexed_df
+        return indexed_df
 
     def _select_conv(self, obsid, subtype, station_id, analysis_use):
         """
@@ -322,69 +297,6 @@ class Conventional(GSIdiag):
         else:
             return df
 
-    def _get_lvl_data(self, obsid, subtype, station_id,
-                      analysis_use, lvls, lvl_type):
-        """
-        Given a list of levels, will create a dictionary of data that is
-        selected between each level. Will return a dictionary with subsetted
-        pressure or height levels where data is separated within those levels:
-
-        dict = {250-500: <data>,
-                500-750: <data>,
-                750-1000: <data>}
-        """
-        binned_dfs = {}
-
-        for i, low_bound in enumerate(lvls[:-1]):
-            high_bound = lvls[i+1]
-
-            if analysis_use:
-                assimilated_df, rejected_df, monitored_df = self._select_conv(
-                    obsid, subtype, station_id, analysis_use)
-
-                assimilated_lvl_df = self._select_levels(
-                    assimilated_df, low_bound, high_bound, lvl_type)
-                rejected_lvl_df = self._select_levels(
-                    rejected_df, low_bound, high_bound, lvl_type)
-                monitored_lvl_df = self._select_levels(
-                    monitored_df, low_bound, high_bound, lvl_type)
-
-                lvl_df = {
-                    'assimilated': assimilated_lvl_df,
-                    'rejected': rejected_lvl_df,
-                    'monitored': monitored_lvl_df
-                }
-
-                binned_dfs[f'{low_bound}-{high_bound}'] = lvl
-
-            else:
-                indexed_df = self._select_conv(obsid, subtype, station_id)
-
-                lvl_df = self._select_levels(
-                    indexed_df, low_bound, high_bound, lvl_type)
-
-                binned_dfs[f'{low_bound}-{high_bound}'] = lvl_df
-
-        return binned_dfs
-
-    def _select_levels(self, df, low_bound, high_bound, lvl_type):
-        """
-        Selects data between two level bounds from given dataframe.
-        """
-
-        if lvl_type == 'pressure':
-            # Grab data greater than low bound and less than or
-            # equal to high_bound
-            df = df.query(
-                f'(pressure > {low_bound}) and (pressure <= {high_bound})')
-
-        else:
-            # Grab data greater than or equal to low bound and
-            # less than high_bound
-            df = df.query(
-                f'(height >= {low_bound}) and (height < {high_bound})')
-
-        return df
 
     def list_obsids(self):
         """

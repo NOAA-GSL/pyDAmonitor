@@ -14,7 +14,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from metpy.plots import USCOUNTIES
 
-def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = None, **args):
+def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = None, hem=None, **args):
 
     '''
     dfs        : list of dataframes to make plots of, should be ordered as followes (ges, anl, anl2, etc)
@@ -57,6 +57,30 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
     if(save_plots):
         dir_name = "plots/" + metadata['Variable'] + "_" + date + "_plots"
         os.makedirs(dir_name, exist_ok=True)
+        
+    lat_range = None
+    lon_range = None
+#     if hem is provided
+    if hem is not None:
+
+        if (hem == "GLOBAL"):
+            lat_range = (-90.0, 90.0)
+            lon_range = (0.0, 360.0)
+        elif (hem == "NH"):
+            lat_range = (-90.0, -30.0)
+            lon_range = (0.0, 360.0)
+        elif (hem == "TR"):
+            lat_range = (-30.0, 30.0)
+            lon_range = (0.0, 360.0)
+        elif (hem == "SH"):
+            lat_range = (-90.0, 90.0)
+            lon_range = (0.0, 360.0)
+        elif (hem == "CONUS"):
+            lat_range = (25.0, 50.0) #! changed from 27 to 25
+            lon_range = (235.0, 295.0)
+        else:
+            msg = 'hemispheres must be: GLOBAL, NH, TR, SH, CONUS, or None'
+            raise ValueError(msg)
         
     df_ges = dfs[0]
     df_anl = dfs[1]
@@ -264,7 +288,8 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
             ax.add_feature(cfeature.STATES, edgecolor='black')
             if(area_size < 50):
                 ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
-            # ax.set_extent([-180, 180, -90, 90])
+            if hem is not None:
+                ax.set_extent([lon_range[0], lon_range[1], lat_range[0], lat_range[1]])
             # Normalization for diverging cmaps, none for increasing cmaps for obs map
             if(label == "Obs"):
                 norm=None
@@ -274,8 +299,8 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
                 else:
                     norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
                     to_share_norm = norm
-            # Plot the scatter data with smaller and more transparent points
-            cs = ax.scatter(coords[1], coords[0], c=data, s=20, cmap=color, alpha=0.7, edgecolors='black',
+            # Plot the scatter data
+            cs = ax.scatter(coords[1], coords[0], c=data, s=60, cmap=color, alpha=0.9, edgecolors='black',
                             linewidths=0.5, transform=ccrs.PlateCarree(), norm=norm)
             # Add gridlines for latitude and longitude
             gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False, alpha=0)

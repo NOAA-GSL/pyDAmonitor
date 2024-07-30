@@ -62,7 +62,7 @@ def filter_df(dfs, **kwargs):
         station_id = df['station_id']
         use_flag = df['analysis_use_flag']
         obs_type = df['observation_type']
-        errorinv = df['errinv_final']
+        error = df['error']
         lat =  df['latitude']
         lon = df['longitude']
         pressure = df['pressure']
@@ -132,14 +132,11 @@ def filter_df(dfs, **kwargs):
 
         #set error mins and maxs, invert them, and filter for desired error values if provided
         if err_range is not None:
-            error_min_inv = err_range[0]
-            if(err_range[0]!=0):
-                error_min_inv = 1.0 / err_range[0]
-            error_max_inv = err_range[1]
-            if(err_range[1]!=0):
-                error_max_inv = 1.0 / err_range[1]
-            mask = np.logical_and(mask, np.logical_and(errorinv >= error_min_inv,
-                                                       errorinv <= error_max_inv))
+            error_min = err_range[0]
+            error_max = err_range[1]
+            
+            mask = np.logical_and(mask, np.logical_and(error >= error_min,
+                                                       error <= error_max))
 
         if(not all(mask)):  
             df.drop(df[~mask].index, inplace = True)

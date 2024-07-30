@@ -289,7 +289,7 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
             if(area_size < 50):
                 ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
             if hem is not None:
-                ax.set_extent([lon_range[0], lon_range[1], lat_range[0], lat_range[1]])
+                ax.set_extent([lon_range[0]-1, lon_range[1]+1, lat_range[0]-1, lat_range[1]+1])
             # Normalization for diverging cmaps, none for increasing cmaps for obs map
             if(label == "Obs"):
                 norm=None

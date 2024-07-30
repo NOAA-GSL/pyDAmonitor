@@ -1,6 +1,6 @@
 '''
 File taken from PyGSI
-Altercations make for PyGSI:
+Altercations make from PyGSI:
 
 -Made all df column headers all lowercase
 -Removed code that creates the multilayer indices in the df
@@ -8,6 +8,8 @@ Altercations make for PyGSI:
 -Removed Ozone and Radiance classes for now
 -Added code to read netCDF files that are gzipped
 -Error handling if file doesn't exist
+
+Error column is still error inverted final but now named 'error', this is because JEDI error is not inverted so a more basic name fits both
 '''
 
 
@@ -156,6 +158,9 @@ class Conventional(GSIdiag):
                 # Create hofx columns
                 df[f'hofx_{bias_type}'] = df['observation'] - \
                     df[f'omf_{bias_type}']
+                
+        # rename error columns
+        df.rename(columns={'errinv_final': 'error'}, inplace=True)
 
         #! Changed by Aiden for pyDAmonitor
         # # Get index values

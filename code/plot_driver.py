@@ -4,7 +4,7 @@ Author: Aiden Pape
 Driver function for plotting real time DA diagnostic plots and statistics
 '''
 
-from diags import Conventional
+from GSI_diags import Conventional
 from filter_df import filter_df
 from make_da_plots import make_base_plots, make_wind_base_plots
 from datetime import datetime

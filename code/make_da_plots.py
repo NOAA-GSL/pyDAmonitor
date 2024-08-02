@@ -81,9 +81,38 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
         else:
             msg = 'hemispheres must be: GLOBAL, NH, TR, SH, CONUS, or None'
             raise ValueError(msg)
+    
+    #Get data from dfs based on which system, (GSI has two files for ges and anl, JEDI has all in one)
+    df_anl = None
+    obs = None
+    omf = None
+    oma = None
+    latlons_ges = None
+    latlons_anl = None
+    
+    if(metadata['DA System'] == 'gsi'):
         
-    df_ges = dfs[0]
-    df_anl = dfs[1]
+        df_ges = dfs[0]
+        df_anl = dfs[1]
+
+        obs = df_ges['observation']
+        omf = df_ges['omf_adjusted']
+        oma = df_anl['omf_adjusted']
+        
+        latlons_ges = (df_ges['latitude'], df_ges['longitude'])
+        latlons_anl = (df_anl['latitude'], df_anl['longitude'])
+        
+    elif(metadata['DA System'] == 'jedi'):
+        
+        df_anl = dfs[0]
+        
+        obs = df_anl['observation']
+        omf = df_anl['ombg']
+        oma = df_anl['oman']
+        
+        # this seemed like the easiest way
+        latlons_ges = (df_anl['latitude'], df_anl['longitude'])
+        latlons_anl = (df_anl['latitude'], df_anl['longitude'])
         
     if(not save_plots):
         print(f'------------ {var_name} Data Assimilation Statistics and Plots ------------\n\n')
@@ -98,16 +127,13 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
         ob_type = df_anl['observation_type'].iloc[0]
         print(f'Observation Type: {ob_type}\n\nProportion Assimilated: {prop_assimilated}\n')
     
-    #*Plot histograms of obs, omf, and omb
-    obs = df_ges['observation']
-    omf = df_ges['omf_adjusted']
-    oma = df_anl['omf_adjusted']
-    
     # Perform conversions from K to F if the variable is temperature
     if metadata['Variable'] == 't':
         obs = (1.8 * (obs - 273.15)) + 32
         omf = 1.8 * omf
         oma = 1.8 * oma
+        
+    #*Plot histograms of obs, omf, and omb
     
     # Create subplots
     fig, axes = plt.subplots(1, 3, figsize=(14, 3))
@@ -135,10 +161,10 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
         
         # Make proper bin sizes using the equation max-min/sqrt(n). Then
         # extend the bin range to 4x the standard deviation
-        binsize = (mx - mn) / np.sqrt(n)
-        bins = np.arange(mean - (3 * std), mean + (3 * std), binsize)
+#         binsize = (mx - mn) / np.sqrt(n)
+#         bins = np.arange(mean - (3 * std), mean + (3 * std), binsize)
         # Plot histogram
-        ax.hist(data, bins=bins)
+        ax.hist(data, bins='auto')
         # Add labels
         ax.set_xlabel(var_units)
         ax.set_ylabel('Count')
@@ -176,9 +202,6 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
         plt.show()
     
     #* Create spatial plots of obs, omf, and oma
-    #get lats and lons
-    latlons_ges = (df_ges['latitude'], df_ges['longitude'])
-    latlons_anl = (df_anl['latitude'], df_anl['longitude'])
     
     #? what is the best way to handle having small scale base_plots and large scale base_plots?
     

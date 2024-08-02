@@ -6,7 +6,7 @@ Read omf/oma data from multiple files to create time series plots
 Current not capable of plotting wind time series
 '''
 
-from GSI_diags import Conventional
+from diags import Conventional
 import os
 import numpy as np
 import pandas as pd

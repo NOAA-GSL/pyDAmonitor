@@ -23,7 +23,149 @@ from datetime import datetime
 from pathlib import Path
 import gzip
 
-_VALID_LVL_TYPES = ["pressure", "height"]
+class JEDIdiag:
+
+    def __init__(self, path, varname, ref_time):
+        """
+        Initialize a GSI diagnostic object
+        INPUT:
+            path : path to GSI diagnostic object
+        """
+
+        self.path = path
+        self.filename = os.path.splitext(Path(self.path).stem)[0]
+        
+        dt = datetime.strptime(ref_time, '%Y%m%d%H')
+
+        self.metadata = {'Variable': varname,
+                         'Date': dt,
+                         'File Type': "JEDI H(x) diag file",
+                         'DA System': "jedi"
+                         }
+
+class hofx(JEDIdiag):
+
+    def __init__(self, path, varname, ref_time, flag=0):
+        """
+        Initialize a conventional GSI diagnostic object
+
+        Args:
+            path : (str) path to conventional GSI diagnostic object
+        Returns:
+            self : GSI diag conventional object containing the path
+                   to extract data
+        """
+        super().__init__(path, varname, ref_time)
+
+        self.df = self.read_obs(varname, flag)
+        
+    def __len__(self):
+        return self.data_df.shape[0]
+
+    def __str__(self):
+        return "JEDI H(x) diagnostic object"
+
+    def read_obs(self, varname, flag):
+
+        # Load the NetCDF file
+        nc_data = Dataset(self.path, "r")
+        
+        var_mapping = {
+            't': 'airTemperature',
+            'ps': 'surfacePressure',
+            'q': 'specificHumidity',
+            'uv': 'wind'
+        }
+        
+        varname = var_mapping.get(varname)
+        
+        if varname is None:
+            raise ValueError(f"Given variable name is not a valid option")
+        
+        #Get mask for filtering rows
+        obs_mask = []
+        qc_flags = []
+        if(varname == 'wind'):
+            obs_mask = ~nc_data.groups["ObsValue"].variables[f'{varname}Eastward'][:].mask
+            qc_flags = nc_data.groups["EffectiveQC0"].variables[f'{varname}Eastward'][:]
+        else:
+            obs_mask = ~nc_data.groups["ObsValue"].variables[varname][:].mask
+            qc_flags = nc_data.groups["EffectiveQC0"].variables[varname][:]
+        
+        filter_mask = []
+        if flag is not None: # filter by QC
+            filter_mask = (qc_flags == flag)
+        else: # get all obs
+            filter_mask = obs_mask
+        
+        #Get data and add to df
+        df_obs = pd.DataFrame()
+        if(varname == 'wind'):
+            for pre, suf in zip(['u_', 'v_'], ['Eastward', 'Northward']):
+                varname = f'wind{suf}'
+                observation = nc_data.groups["ObsValue"].variables[varname][:][filter_mask]
+                error = nc_data.groups["EffectiveError0"].variables[varname][:][filter_mask]
+                oman = nc_data.groups["oman"].variables[varname][:][filter_mask]
+                ombg = nc_data.groups["ombg"].variables[varname][:][filter_mask]
+                
+                data_obs = np.column_stack((observation, error, oman, ombg))
+                df_obs_vector = pd.DataFrame(data_obs, columns=[f'{pre}observation', f'{pre}error',
+                                                         f'{pre}oman', f'{pre}ombg'])
+                df_obs = pd.concat([df_obs, df_obs_vector], axis=1)
+        else:
+            observation = nc_data.groups["ObsValue"].variables[varname][:][filter_mask]
+            error = nc_data.groups["EffectiveError0"].variables[varname][:][filter_mask]
+            oman = nc_data.groups["oman"].variables[varname][:][filter_mask]
+            ombg = nc_data.groups["ombg"].variables[varname][:][filter_mask]
+
+            data_obs = np.column_stack((observation, error, oman, ombg))
+            df_obs = pd.DataFrame(data_obs, columns=[f'observation', f'error',
+                                                     f'oman', f'ombg'])
+
+        datetime = nc_data.groups["MetaData"].variables["dateTime"][:][filter_mask]
+        latitude = nc_data.groups["MetaData"].variables["latitude"][:][filter_mask]
+        longitude = nc_data.groups["MetaData"].variables["longitude"][:][filter_mask]
+        pressure = nc_data.groups["MetaData"].variables["pressure"][:][filter_mask]
+        station_elevation = nc_data.groups["MetaData"].variables["stationElevation"][:][filter_mask]
+        station_id = nc_data.groups["MetaData"].variables["stationIdentification"][:][filter_mask]
+        observation_type = nc_data.groups["MetaData"].variables["prepbufrReportType"][:][filter_mask]
+        qc_flags = qc_flags[:][filter_mask]
+        analysis_use_flag = (qc_flags == 0)
+        
+        data_meta = np.column_stack((datetime, latitude, longitude, pressure, station_elevation,
+                                     station_id, observation_type, qc_flags, analysis_use_flag))
+        df_meta = pd.DataFrame(data_meta, columns=['datetime', 'latitude', 'longitude', 'pressure',
+                                                   'station_elevation', 'station_id', 'observation_type',
+                                                   'qc_flags', 'analysis_use_flag'])
+        
+        df_jedi = pd.concat([df_meta, df_obs], axis=1)
+        
+        nc_data.close()
+
+        
+        return df_jedi
+    
+
+    def list_obsids(self):
+        """
+        Prints all the unique observation ids in the diagnostic file.
+        """
+        obsids = sorted(self.obs_ids)
+
+        print('Observation IDs in this diagnostic file include:\n'
+              f'{", ".join([str(x) for x in obsids])}')
+
+    def list_stationids(self):
+        """
+        Prints all the unique station ids in the diagnostic file.
+        """
+        stnids = sorted(self.stn_ids)
+
+        print('Station IDs in this diagnostic file include:\n'
+              f'{", ".join([str(x) for x in stnids])}')
+
+
+
 
 
 class GSIdiag:
@@ -49,7 +191,8 @@ class GSIdiag:
         self.metadata = {'Obs Type': self.obs_type,
                          _var_key_name: self.variable,
                          'Date': self.date,
-                         'File Type': self.ftype
+                         'File Type': self.ftype,
+                         'DA System': 'gsi'
                          }
 
     # def __len__(self):

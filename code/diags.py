@@ -103,33 +103,33 @@ class hofx(JEDIdiag):
         if(varname == 'wind'):
             for pre, suf in zip(['u_', 'v_'], ['Eastward', 'Northward']):
                 varname = f'wind{suf}'
-                observation = nc_data.groups["ObsValue"].variables[varname][:][filter_mask]
-                error = nc_data.groups["EffectiveError0"].variables[varname][:][filter_mask]
-                oman = nc_data.groups["oman"].variables[varname][:][filter_mask]
-                ombg = nc_data.groups["ombg"].variables[varname][:][filter_mask]
+                observation = nc_data.groups["ObsValue"].variables[varname][:][filter_mask].astype(float)
+                error = nc_data.groups["EffectiveError0"].variables[varname][:][filter_mask].astype(float)
+                oman = nc_data.groups["oman"].variables[varname][:][filter_mask].astype(float)
+                ombg = nc_data.groups["ombg"].variables[varname][:][filter_mask].astype(float)
                 
                 data_obs = np.column_stack((observation, error, oman, ombg))
                 df_obs_vector = pd.DataFrame(data_obs, columns=[f'{pre}observation', f'{pre}error',
                                                          f'{pre}oman', f'{pre}ombg'])
                 df_obs = pd.concat([df_obs, df_obs_vector], axis=1)
         else:
-            observation = nc_data.groups["ObsValue"].variables[varname][:][filter_mask]
-            error = nc_data.groups["EffectiveError0"].variables[varname][:][filter_mask]
-            oman = nc_data.groups["oman"].variables[varname][:][filter_mask]
-            ombg = nc_data.groups["ombg"].variables[varname][:][filter_mask]
+            observation = nc_data.groups["ObsValue"].variables[varname][:][filter_mask].astype(float)
+            error = nc_data.groups["EffectiveError0"].variables[varname][:][filter_mask].astype(float)
+            oman = nc_data.groups["oman"].variables[varname][:][filter_mask].astype(float)
+            ombg = nc_data.groups["ombg"].variables[varname][:][filter_mask].astype(float)
 
             data_obs = np.column_stack((observation, error, oman, ombg))
-            df_obs = pd.DataFrame(data_obs, columns=[f'observation', f'error',
-                                                     f'oman', f'ombg'])
+            df_obs = pd.DataFrame(data_obs, columns=['observation', 'error',
+                                                     'oman', 'ombg'])
 
-        datetime = nc_data.groups["MetaData"].variables["dateTime"][:][filter_mask]
-        latitude = nc_data.groups["MetaData"].variables["latitude"][:][filter_mask]
-        longitude = nc_data.groups["MetaData"].variables["longitude"][:][filter_mask]
-        pressure = nc_data.groups["MetaData"].variables["pressure"][:][filter_mask]
-        station_elevation = nc_data.groups["MetaData"].variables["stationElevation"][:][filter_mask]
-        station_id = nc_data.groups["MetaData"].variables["stationIdentification"][:][filter_mask]
-        observation_type = nc_data.groups["MetaData"].variables["prepbufrReportType"][:][filter_mask]
-        qc_flags = qc_flags[:][filter_mask]
+        datetime = nc_data.groups["MetaData"].variables["dateTime"][:][filter_mask].astype(str)
+        latitude = nc_data.groups["MetaData"].variables["latitude"][:][filter_mask].astype(float)
+        longitude = nc_data.groups["MetaData"].variables["longitude"][:][filter_mask].astype(float)
+        pressure = nc_data.groups["MetaData"].variables["pressure"][:][filter_mask].astype(float)
+        station_elevation = nc_data.groups["MetaData"].variables["stationElevation"][:][filter_mask].astype(float)
+        station_id = nc_data.groups["MetaData"].variables["stationIdentification"][:][filter_mask].astype(str)
+        observation_type = nc_data.groups["MetaData"].variables["prepbufrReportType"][:][filter_mask].astype(int)
+        qc_flags = qc_flags[:][filter_mask].astype(int)
         analysis_use_flag = (qc_flags == 0)
         
         data_meta = np.column_stack((datetime, latitude, longitude, pressure, station_elevation,
@@ -138,7 +138,20 @@ class hofx(JEDIdiag):
                                                    'station_elevation', 'station_id', 'observation_type',
                                                    'qc_flags', 'analysis_use_flag'])
         
+        # Convert columns to appropriate data types
+        df_meta['latitude'] = df_meta['latitude'].astype(float)
+        df_meta['longitude'] = df_meta['longitude'].astype(float)
+        df_meta['pressure'] = df_meta['pressure'].astype(float)
+        df_meta['station_elevation'] = df_meta['station_elevation'].astype(float)
+        df_meta['observation_type'] = df_meta['observation_type'].astype(int)
+        df_meta['qc_flags'] = df_meta['qc_flags'].astype(int)
+        df_meta['analysis_use_flag'] = df_meta['analysis_use_flag'].astype(bool)
+        
         df_jedi = pd.concat([df_meta, df_obs], axis=1)
+        
+#         for column in df_jedi.columns:
+#             print(column)
+#             print(f'dtype: {df_jedi[column].dtype}')
         
         nc_data.close()
 

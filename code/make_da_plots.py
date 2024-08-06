@@ -83,6 +83,7 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
             raise ValueError(msg)
     
     #Get data from dfs based on which system, (GSI has two files for ges and anl, JEDI has all in one)
+    df_ges=None
     df_anl = None
     obs = None
     omf = None
@@ -365,21 +366,49 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         dir_name = f'wind_{date}_plots'
         os.makedirs(dir_name, exist_ok=True)
         
-    df_ges = dfs[0]
-    df_anl = dfs[1]
+    #Get data from dfs based on which system, (GSI has two files for ges and anl, JEDI has all in one)
+    df_ges=None
+    df_anl = None
+    obs = None
+    omf = None
+    oma = None
+    latlons_ges = None
+    latlons_anl = None
+    
+    if(metadata['DA System'] == 'gsi'):
+        
+        df_ges = dfs[0]
+        df_anl = dfs[1]
+
+        u_obs = df_ges['u_observation']
+        v_obs = df_ges['v_observation']
+        u_omf = df_ges['u_omf_adjusted']
+        v_omf = df_ges['v_omf_adjusted']
+        u_oma = df_anl['u_omf_adjusted']
+        v_oma = df_anl['v_omf_adjusted']
+        
+        latlons_ges = (df_ges['latitude'], df_ges['longitude'])
+        latlons_anl = (df_anl['latitude'], df_anl['longitude'])
+        
+    elif(metadata['DA System'] == 'jedi'):
+        
+        df_anl = dfs[0]
+        
+        u_obs = df_anl['u_observation']
+        v_obs = df_anl['v_observation']
+        u_omf = df_anl['u_ombg']
+        v_omf = df_anl['v_ombg']
+        u_oma = df_anl['u_oman']
+        v_oma = df_anl['v_oman']
+        
+        # this seemed like the easiest way
+        latlons_ges = (df_anl['latitude'], df_anl['longitude'])
+        latlons_anl = (df_anl['latitude'], df_anl['longitude'])
     
     if(not save_plots):
         print('------------ Wind Data Assimilation Statistics and Plots ------------\n\n')
     else:
-        print('Creating wind plots...')
-    
-    # Get data arrays
-    u_obs = df_ges['u_observation']
-    v_obs = df_ges['v_observation']
-    u_omf = df_ges['u_omf_adjusted']
-    v_omf = df_ges['v_omf_adjusted']
-    u_oma = df_anl['u_omf_adjusted']
-    v_oma = df_anl['v_omf_adjusted']
+            print('Creating wind plots...')
     
     #* Create the bar plot by obs type showing proportional assimilated and total assimilated
     if(len(df_anl['observation_type'].unique()) > 1):
@@ -390,7 +419,7 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         print(f'Observation Type: {ob_type}\n\nProportion Assimilated: {prop_assimilated}\n')
     
     #*Plot histograms of obs, omf, and omb
-    #get windspped or wind magnitude from two vectors
+    #get windspeed or wind magnitude from two vectors
     mag_obs = np.sqrt( (u_obs**2) + (v_obs**2) )
     mag_omf = np.sqrt( (u_omf**2) + (v_omf**2) )
     mag_oma = np.sqrt( (u_oma**2) + (v_oma**2) )
@@ -431,10 +460,10 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         
         # Make proper bin sizes using the equation max-min/sqrt(n). Then
         # extend the bin range to 4x the standard deviation
-        binsize = (mx - mn) / np.sqrt(n)
-        bins = np.arange(mean - (4 * std), mean + (4 * std), binsize)
+#         binsize = (mx - mn) / np.sqrt(n)
+#         bins = np.arange(mean - (4 * std), mean + (4 * std), binsize)
         # Plot histogram
-        ax.hist(data, bins=bins)
+        ax.hist(data, bins='auto')
         # Add labels
         ax.set_xlabel(label)
         ax.set_ylabel('Count')
@@ -475,14 +504,16 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
     
     # Define your datasets and metadata
     datasets = [
-        ('Obs', df_ges, u_obs, v_obs, mag_obs),
-        ('OmF', df_ges, u_omf, v_omf, mag_omf),
-        ('OmA', df_anl, u_oma, v_oma, mag_oma)
+        ('Obs', latlons_ges, u_obs, v_obs, mag_obs),
+        ('OmF', latlons_ges, u_omf, v_omf, mag_omf),
+        ('OmA', latlons_anl, u_oma, v_oma, mag_oma)
     ]
     
     #Loop thru each dataset
-    for title, df, u, v, mag in datasets:
-        latlons = (df['latitude'], df['longitude'])
+    for title, latlons, u, v, mag in datasets:
+        
+        lats = latlons[0]
+        lons = latlons[1]
         
         # Get size of geographic extent
         area_size = (latlons[0].max() - latlons[0].min()) * (latlons[1].max() - latlons[1].min())
@@ -497,9 +528,14 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         if area_size < 50:
             ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
         
-        # Normalize magnitude so the arrows are all the same size
-        u_norm = u / np.abs(mag)
-        v_norm = v / np.abs(mag)
+        # Normalize magnitude so the arrows are all the same size, init with zeros
+        u_norm = np.zeros_like(u)
+        v_norm = np.zeros_like(v)
+
+        # Set u_norm and v_norm only where mag is not zero
+        non_zero_mask = mag != 0
+        u_norm[non_zero_mask] = u[non_zero_mask] / np.abs(mag[non_zero_mask])
+        v_norm[non_zero_mask] = v[non_zero_mask] / np.abs(mag[non_zero_mask])
         
         # Plot wind as arrows
         cs = plt.quiver(latlons[1], latlons[0], u_norm, v_norm, mag, scale = 5, scale_units = 'inches',

@@ -14,19 +14,19 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from metpy.plots import USCOUNTIES
 
-def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = None, hem=None, **args):
+def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = None, hem=None):
 
     '''
-    dfs        : list of dataframes to make plots of, should be ordered as followes (ges, anl, anl2, etc)
-                 all dataframes should be returned by pyDAmonitor.diags.get_data() (at the moment, only 
-                 [ges, anl] supported
-    metadata   : metadata dict returned by Conventional.metadata from either ges or anl file
+    dfs        : list of dataframes to make plots of, should be ordered as follows (ges, anl)
+                 dataframes should be returned by pyDAmonitor.diags.get_data() (at the moment, only 
+                 plotting two dataframes supported)
+    metadata   : metadata dict returned by Conventional.metadata or hofx.metadata from either ges or anl 
+                 file
     zoom       : (bool) True to plot oma/omf on the same plot on more zoomed in geo extents
     save_plots : (bool) True to save plots as files instead of printing
-    shared_norm: omf/oma norm returned from other make_base_plots function if aligned scales is needed
-    
-    Additional Args:
-    All keyword arguments to filter can be passed to make_base_plots to filter data before creating plots
+    shared_norm: norm for oma/omf spatial plots returned from other make_base_plots function if aligned 
+                 scales is needed
+    hem        : geographic extent desired to be shown in map, if none, map will crop to fit points
     
     return: to_share_norm, the norm used in these omf/oma plots to be passed to another make_base_plots 
     '''
@@ -319,8 +319,10 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
                 norm=None
             else:
                 if shared_norm is not None:
+                    # Use norm returned from another make_base_plots for making scales
                     norm = shared_norm
                 else:
+                    #Create new norm
                     norm = mcolors.TwoSlopeNorm(vmin = 0 - (np.std(omf)*2), vcenter=0, vmax = 0 + (np.std(omf)*2))
                     to_share_norm = norm
             # Plot the scatter data
@@ -350,7 +352,7 @@ def make_base_plots(dfs, metadata, zoom=True, save_plots=False, shared_norm = No
     return to_share_norm
         
         
-def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
+def make_wind_base_plots(dfs, metadata, save_plots=False, hem=None):
     
     # check if the dfs passed are contain wind, which would have speed and direction
     if(metadata['Variable'] != 'uv'):
@@ -365,6 +367,30 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
     if(save_plots):
         dir_name = f'wind_{date}_plots'
         os.makedirs(dir_name, exist_ok=True)
+        
+    lat_range = None
+    lon_range = None
+#     if hem is provided
+    if hem is not None:
+
+        if (hem == "GLOBAL"):
+            lat_range = (-90.0, 90.0)
+            lon_range = (0.0, 360.0)
+        elif (hem == "NH"):
+            lat_range = (-90.0, -30.0)
+            lon_range = (0.0, 360.0)
+        elif (hem == "TR"):
+            lat_range = (-30.0, 30.0)
+            lon_range = (0.0, 360.0)
+        elif (hem == "SH"):
+            lat_range = (-90.0, 90.0)
+            lon_range = (0.0, 360.0)
+        elif (hem == "CONUS"):
+            lat_range = (25.0, 50.0) #! changed from 27 to 25
+            lon_range = (235.0, 295.0)
+        else:
+            msg = 'hemispheres must be: GLOBAL, NH, TR, SH, CONUS, or None'
+            raise ValueError(msg)
         
     #Get data from dfs based on which system, (GSI has two files for ges and anl, JEDI has all in one)
     df_ges=None
@@ -527,7 +553,9 @@ def make_wind_base_plots(dfs, metadata, save_plots=False, **args):
         ax.add_feature(cfeature.STATES, edgecolor='black')
         if area_size < 50:
             ax.add_feature(USCOUNTIES.with_scale('500k'), linewidth=0.10, edgecolor='black')
-        
+        #Set map extent if specified
+        if hem is not None:
+                ax.set_extent([lon_range[0]-1, lon_range[1]+1, lat_range[0]-1, lat_range[1]+1])
         # Normalize magnitude so the arrows are all the same size, init with zeros
         u_norm = np.zeros_like(u)
         v_norm = np.zeros_like(v)

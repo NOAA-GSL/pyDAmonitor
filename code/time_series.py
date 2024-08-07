@@ -16,7 +16,8 @@ from datetime import datetime
 
 def plot_time_series(paths, models, var, anl_ges, s_time, f_time, use=None, lat_range=None, lon_range=None, station_ids=None, obs_types=None, save_plot=False):
     '''
-    Get filepaths for RTMA CONUS GSI diag files
+    Get filepaths for RTMA CONUS GSI diag files, read and filter data, and create time series plots. 
+    Missing data will be shown with a red dot for that time
     
     Parameters:
     

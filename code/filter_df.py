@@ -5,8 +5,8 @@ import numpy as np
 def filter_df(dfs, **kwargs):
     """
     Create the bool array mask to filter df by. Considers obs filtered by the use flag,
-    max/min pressure, latitude, longitude, and errors along with filtering by bufr
-    obs_type (e.g., 187 or 287).
+    max/min pressure, latitude, longitude, elevation, and errors along with filtering by bufr
+    obs_type (e.g., 187 or 287) and station id.
 
         dfs         : a list of pandas dfs, each returned by inputing a netCDF file into
                         diags.Conventional.get_data()
@@ -15,7 +15,7 @@ def filter_df(dfs, **kwargs):
         station_ids: (array str) id of station observation was taken at
         use_flag   : (array int) 1 if assimilated, 0 if not
         obs_type   : (array int) bufr observation obs_types <Observation_Type>
-        errorinv   : (array float) observation <Errinv_Final>
+        error      : (array float) observation <Errinv_Final>
         lat        : (array float) observation <Latitude>
         lon        : (array float) observation <Longitude>
         pressure   : (array float) observation <Pressure>
@@ -31,7 +31,7 @@ def filter_df(dfs, **kwargs):
         elv_range  : (float tuple) (min, max) height (m) for including observation in df
         lat_range  : (float tuple) (min, max) latitude (deg N) for including observation in df
         lon_range  : (float tuple) (min, max) latitude (deg E) for including observation in df
-        err_range  : (float tuple) (min, max) error std dev for including observation in df (not inversed)
+        err_range  : (float tuple) (min, max) error for including observation in df
         inPlace    : (bool) True to filter current df, False to return reference to a new filtered df
 
     Returns:

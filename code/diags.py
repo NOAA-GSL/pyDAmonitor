@@ -50,10 +50,13 @@ class hofx(JEDIdiag):
         Initialize a conventional GSI diagnostic object
 
         Args:
-            path : (str) path to conventional GSI diagnostic object
+            path    : (str) path to conventional GSI diagnostic object
+            varname : (str) desired variable name, options: (t, ps, q, or uv)
+            ref_time: (str) time of analysis
+            flag    : (int) qc flag to filter for
+            
         Returns:
-            self : GSI diag conventional object containing the path
-                   to extract data
+            self : JEDI diag hofx object 
         """
         super().__init__(path, varname, ref_time)
 
@@ -149,9 +152,8 @@ class hofx(JEDIdiag):
         
         df_jedi = pd.concat([df_meta, df_obs], axis=1)
         
-#         for column in df_jedi.columns:
-#             print(column)
-#             print(f'dtype: {df_jedi[column].dtype}')
+        self.obs_ids = df_jedi['observation_type'].unique()
+        self.stn_ids = df_jedi['station_id'].unique()
         
         nc_data.close()
 
@@ -187,7 +189,7 @@ class GSIdiag:
         """
         Initialize a GSI diagnostic object
         INPUT:
-            path : path to GSI diagnostic object
+            path : path to GSI diagnostic file
         """
 
         self.path = path
@@ -219,7 +221,7 @@ class Conventional(GSIdiag):
         Initialize a conventional GSI diagnostic object
 
         Args:
-            path : (str) path to conventional GSI diagnostic object
+            path : (str) path to conventional GSI diagnostic file
         Returns:
             self : GSI diag conventional object containing the path
                    to extract data

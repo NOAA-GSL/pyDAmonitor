@@ -1,0 +1,15 @@
+# configuration for DA monitoring
+# path: /Users/aidenpape/Desktop/noaa/code/pyDAmonitor/example_data # aidens laptop
+path: /lfs5/BMC/wrfruc/aiden.pape/pyDAmonitor/example_data # jet
+model: rtma
+date_time: 2024031812
+var: t
+# station_ids: []
+# obs_types: []
+# use: 0
+hem: CONUS
+# p_range: [100, 200]
+# elv_range: [0, 1000]
+# lat_range: [-90, 90]
+# lon_range: [-180, 180]
+# err_range: [0, 10]
